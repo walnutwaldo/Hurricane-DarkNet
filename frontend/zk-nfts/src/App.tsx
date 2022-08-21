@@ -27,7 +27,7 @@ function App() {
                         </h1>
                         <p className={"text-right"}>
                             Walden Yan<br/>
-                            Allison Chen <br/>
+                            Allison Qi <br/>
                             Brandon Wang
                         </p>
                     </div>
