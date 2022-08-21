@@ -7,9 +7,9 @@ function App() {
     return (
         <div>
             <div className={"bg-cyan-900"}>
-                <div className="container mx-auto py-2 flex flex-row justify-between">
+                <div className="container mx-auto py-3 flex flex-row justify-between">
                     <div className={"flex flex-col"}>
-                        <h1 className="text-xl text-white font-bold my-auto">
+                        <h1 className="text-2xl text-white font-bold my-auto">
                             zkNFTs
                         </h1>
                     </div>
