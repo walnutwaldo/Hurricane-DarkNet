@@ -19,7 +19,7 @@ function App() {
                 <div className="container mx-auto py-2">
                     <div className="flex flex-row justify-between text-white">
                         <h1 className="text-md">
-                            Built at <b>Hacklodge 2020</b>
+                            Built at <b>Hacklodge 2022</b>
                         </h1>
                         <p className={"text-right"}>
                             Walden Yan<br/>
