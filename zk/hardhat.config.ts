@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
         // (required) The final ptau file, relative to inputBasePath, from a Phase 1 ceremony
         ptau: "pot15_final.ptau",
         // (required) Each object in this array refers to a separate circuit
-        circuits: [{name: "dummy1"}, {name: "dummy2"}],
+        circuits: [{name: "depositor"}, {name: "verifier"}],
     },
     networks: {
         goerli: {
