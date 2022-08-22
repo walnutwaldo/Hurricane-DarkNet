@@ -18,7 +18,7 @@ function App() {
                                     Hurricane
                                 </h1>
                                 <h2 className={"text-lg text-white font-mono"}>
-                                    Hurricane NFT Mixer
+                                    NFT DarkNet
                                 </h2>
                             </div>
                         </div>
