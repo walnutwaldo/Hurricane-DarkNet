@@ -1,7 +1,7 @@
 import React, {useRef, useState} from 'react';
 
 // @ts-ignore
-const {groth16} = snarkjs;
+const {groth16, zKey} = snarkjs;
 
 export default function Content() {
     const [error, setError] = useState("");
@@ -10,13 +10,16 @@ export default function Content() {
 
     const aRef = useRef<HTMLInputElement>(null);
     const bRef = useRef<HTMLInputElement>(null);
+    const cRef = useRef<HTMLInputElement>(null);
 
-    async function runProof(a: number, b: number) {
+    async function runProof(a: number, b: number, c: number) {
         console.log("starting proof");
         const {proof, publicSignals} = await groth16.fullProve({
             a: a,
-            b: b
+            b: b,
+            c: c
         }, "circuit/multiply.wasm", "circuit/multiply.zkey");
+        // console.log(await groth16.exportSolidityCallData(publicSignals, proof));
         setProof(proof);
         setPublicSignals(publicSignals)
     }
@@ -29,14 +32,13 @@ export default function Content() {
                     // Get fields A and B as numbers
                     const a = parseInt(aRef.current!.value);
                     const b = parseInt(bRef.current!.value);
-                    if (Number.isNaN(a) || Number.isNaN(b)) {
+                    const c = parseInt(cRef.current!.value);
+                    if (Number.isNaN(a) || Number.isNaN(b) || Number.isNaN(c)) {
                         setError("Please enter valid numbers");
                     } else {
                         setError("");
+                        return runProof(a, b, c);
                     }
-                    console.log("A:", a);
-                    console.log("B:", b);
-                    return runProof(a, b);
                 }
             }>
                 <label>A:</label>
@@ -44,6 +46,9 @@ export default function Content() {
                        className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
                 <label>B:</label>
                 <input type="text" name="b" ref={bRef}
+                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                <label>C:</label>
+                <input type="text" name="c" ref={cRef}
                        className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
                 <button type="submit" className={"bg-slate-200 p-1 rounded-md"}>
                     Generate Proof
