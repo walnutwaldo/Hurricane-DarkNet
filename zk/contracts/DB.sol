@@ -52,7 +52,7 @@ contract DB is ERC20, Verifier {
         return path;
     }
 
-    function deposit(uint256 memory index, uint256[HEIGHT] memory path) external noReentrant {
+    function deposit(uint256 memory index, uint256[HEIGHT] memory path) external payable noReentrant {
         require(DepositVerifier.verifyProof(index, path), "Invalid Deposit Proof");
         uint256 index = size;
         size++;
@@ -64,7 +64,9 @@ contract DB is ERC20, Verifier {
         merkleRoot = path[HEIGHT];
 
         emit Deposit(size);
-        IERC20(ETH_ADDRESS).transferFrom(msg.sender, address(this), 1);
+        require(msg.value == 1 ether, "deposit must be 1 ether");
+        require(depositVerifier.verifyProof(a, b, c, input), "deposit proof is invalid");
+       //  IERC20(ETH_ADDRESS).transferFrom(msg.sender, address(this), 1);
     }
 
     function withdraw(bytes32 memory merkleRoot, bytes32 memory nullifier) external noReentrant {
@@ -73,6 +75,8 @@ contract DB is ERC20, Verifier {
         require(WithdrawVerifier.verifyProof(merkleRoot, nullifer));
         nullifers[nullifier]= true;
         emit Withdraw(nullifer);
-        IERC20(ETH_ADDRESS).transferFrom(address, msg.sender, address(this));
+        //IERC20(ETH_ADDRESS).transferFrom(address, msg.sender, address(this));
+        (bool success, bytes memory data) = msg.sender.call{value : 1 ether}("");
+        require(success, "withdraw failed");
     }
 }
