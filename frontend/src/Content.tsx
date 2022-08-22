@@ -1,19 +1,16 @@
-import React, {useContext, useRef, useState} from 'react';
+import React, {useContext, useState} from 'react';
 import {
     useContractRead,
-    useContractWrite,
-    usePrepareContractWrite,
-    usePrepareSendTransaction,
-    useSendTransaction
 } from "wagmi";
 import {BigNumber} from "ethers";
-import VERIFIER_CONTRACT_ABI from "./contracts/verifier_abi.json";
 import SecretContext from './contexts/SecretContext';
+import {PrimaryButton, SecondaryButton} from "./components/buttons";
+import HURRICANE_CONTRACT_ABI from "./contracts/hurricane_abi.json";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
 
-const VERIFIER_CONTRACT_ADDRESS = "0x05298fbF8C22BF842ce711bA5A018B29d6caF65a";
+const HURRICANE_CONTRACT_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
 
 const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
 
@@ -26,10 +23,7 @@ function GenerateSecretSection() {
             GENERATE A SECRET
         </h3>
         <div className={"flex flex-row gap-2"}>
-            <button className={
-                "outline-none bg-teal-400 text-white rounded-md px-1 transition" +
-                " hover:scale-105 font-bold"
-            } onClick={() => {
+            <PrimaryButton onClick={() => {
                 const randomBytes = crypto.getRandomValues(new Uint32Array(10));
                 // Concatenate into hex string
                 const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
@@ -37,14 +31,11 @@ function GenerateSecretSection() {
                 setSecret!(secret);
             }}>
                 Generate
-            </button>
+            </PrimaryButton>
             {
                 (secret !== undefined) && (
                     <>
-                        <button className={
-                            "outline-none enabled:bg-zinc-400 disabled:bg-zinc-500 text-white rounded-md px-1 transition" +
-                            " enabled:hover:scale-105 font-bold"
-                        } onClick={() => {
+                        <SecondaryButton onClick={() => {
                             // Copy secret.toHexString() to clipboard
                             navigator.clipboard.writeText(secret.toHexString());
                             setEnableCopy(false);
@@ -53,7 +44,7 @@ function GenerateSecretSection() {
                             }, 1000);
                         }} disabled={!enableCopy}>
                             {enableCopy ? "Copy" : "Copied!"}
-                        </button>
+                        </SecondaryButton>
                         <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
                                 {secret.toHexString()}
                             </span>
@@ -65,11 +56,92 @@ function GenerateSecretSection() {
 }
 
 function DepositSection() {
+    const {secret, setSecret} = useContext(SecretContext);
+    const [generatingProof, setGeneratingProof] = useState(false);
+
+    const [proof, setProof] = useState<{
+        pi_a: [string, string],
+        pi_b: [[string, string], [string, string]],
+        pi_c: [string, string],
+    } | undefined>(undefined);
+    const [
+        publicSignals,
+        setPublicSignals
+    ] = useState<string[] | undefined>(undefined);
+
+    const numLeavesData = useContractRead({
+        addressOrName: HURRICANE_CONTRACT_ADDRESS,
+        contractInterface: HURRICANE_CONTRACT_ABI,
+        functionName: 'numLeaves',
+    });
+    const numLeaves = numLeavesData.data;
+
+    console.log("numLeaves", numLeaves);
+
+    const siblingsData = useContractRead({
+        addressOrName: HURRICANE_CONTRACT_ADDRESS,
+        contractInterface: HURRICANE_CONTRACT_ABI,
+        functionName: 'getPath',
+        args: [0]
+    });
+
+    console.log("siblings:", siblingsData.data);
+
+    async function runProof() {
+        const {proof, publicSignals} = await groth16.fullProve({
+            secret: secret!.toString(),
+            mimcK: "0",
+            others: [],
+            dirs: []
+        }, "circuit/depositor.wasm", "circuit/depositor.zkey");
+        setProof(proof);
+        setPublicSignals(publicSignals);
+    }
+
     return (
         <div className={"mb-3"}>
             <h3 className={"text-lg text-black font-bold"}>
                 DEPOSIT
             </h3>
+            {
+                secret ? (
+                    <div>
+                        <PrimaryButton onClick={() => {
+                            setGeneratingProof(true);
+                            runProof().then(() => {
+                                setGeneratingProof(false);
+                            })
+                        }}>
+                            Deposit 1 ETH
+                        </PrimaryButton>
+                        <div>
+                            {
+                                generatingProof ? (
+                                    <span>Generating Proof ...</span>
+                                ) : (
+                                    <div>
+                                        Proof
+                                        <div
+                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
+                                            {JSON.stringify(proof, null, 2)}
+                                        </div>
+                                        Public Input
+                                        <div
+                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
+                                            {JSON.stringify(publicSignals, null, 2)}
+                                        </div>
+                                    </div>
+                                )
+                            }
+                        </div>
+                    </div>
+
+                ) : (
+                    <span>
+                        First generate a secret to being a deposit.
+                    </span>
+                )
+            }
         </div>
     )
 }
