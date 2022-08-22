@@ -44,7 +44,7 @@ root.render(
     <React.StrictMode>
         <WagmiConfig client={wagmiClient}>
             <RainbowKitProvider chains={chains} theme={lightTheme({
-                accentColor: '#55abda',
+                accentColor: '#5ad9ca',
                 accentColorForeground: 'white',
             })}>
                 <App/>
