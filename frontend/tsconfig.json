@@ -17,8 +17,9 @@
     "importHelpers": true,
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
-    "noUnusedLocals": true,
-    "allowSyntheticDefaultImports": true
+    "noUnusedLocals": false,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
   },
   "exclude": [
     "node_modules",
