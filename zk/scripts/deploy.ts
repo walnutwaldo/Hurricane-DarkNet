@@ -1,11 +1,22 @@
 import {ethers} from "hardhat";
+import hasher from "./hasher";
 
 async function main() {
+    const signers = await ethers.getSigners();
+    const signer = signers[0];
+
+    const Hasher = new ethers.ContractFactory(hasher.abi, hasher.bytecode, signer);
+    const hasherContract = await Hasher.deploy();
+    console.log(`Deployed Hasher at ${hasherContract.address}`);
+
+    const testval = await hasherContract.MiMCSponge(0, 0, 0);
+    console.log(`testval: ${testval}`);
+
     const Hurricane = await ethers.getContractFactory("Hurricane");
-    const contract = await Hurricane.deploy();
+    const contract = await Hurricane.deploy(hasherContract.address);
 
     const contractAddress = contract.address;
-    console.log("Contract Address:", contractAddress);
+    console.log(`Deployed Hurricane at ${contractAddress}`);
 }
 
 main().catch((error) => {

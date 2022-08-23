@@ -1,13 +1,17 @@
 pragma solidity ^0.6.11;
 
 import "./ReentrancyGuard.sol";
-import "./DepositorBigVerifier.sol";
 import "./WithdrawerBigVerifier.sol";
 
-contract Hurricane is ReentrancyGuard {
+interface IHasher {
+    function MiMCSponge(uint256 in_xL, uint256 in_xR, uint256 k) external pure returns (uint256 xL, uint256 xR);
+}
 
-    DepositVerifier public depositVerifier;
-    WithdrawVerifier public withdrawVerifier;
+contract Hurricane is ReentrancyGuard, Verifier {
+
+    uint256 public constant FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+
+    IHasher public immutable hasher;
 
     uint public merkleRoot;
     uint[][31] merkleTree;
@@ -16,9 +20,8 @@ contract Hurricane is ReentrancyGuard {
 
     mapping(uint => bool) public nullifiers;
 
-    constructor() public {
-        depositVerifier = new DepositVerifier();
-        withdrawVerifier = new WithdrawVerifier();
+    constructor(IHasher _hasher) public {
+        hasher = _hasher;
     }
 
     function numLeaves() public view returns (uint) {
@@ -42,55 +45,49 @@ contract Hurricane is ReentrancyGuard {
         }
     }
 
-    function depositUpdate(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[93] memory input
-    ) internal {
-        require(depositVerifier.verifyProof(a, b, c, input), "Deposit proof is invalid");
+    function hashLeftRight(
+        IHasher _hasher,
+        uint _left,
+        uint _right
+    ) internal pure returns (uint) {
+        //        require(_left < FIELD_SIZE, "_left should be inside the field");
+        //        require(_right < FIELD_SIZE, "_right should be inside the field");
+        uint R = _left;
+        uint C = 0;
+        (R, C) = _hasher.MiMCSponge(R, C, 0);
+        R = addmod(R, _right, FIELD_SIZE);
+        (R, C) = _hasher.MiMCSponge(R, C, 0);
+        return R;
+    }
 
-        uint newMerkleRoot = input[0];
-        uint mimcK = input[32];
-        require(mimcK == 0, "MIMC K must be zero");
-
-        // newMerkleRoot === last element of Path verified by circuit already
-        // require(newMerkleRoot == input[31], "merkle root does not match last path element");
-
-        uint currLayer = 0;
+    function depositUpdate(uint leaf) internal {
         uint currIndex = numLeaves();
-        indexOfLeaf[input[1]] = currIndex;
         require(currIndex < 2 ** 30, "Too many leaves");
 
-        for (; currLayer < 31; currLayer++) {
+        indexOfLeaf[leaf] = currIndex;
+        setNode(0, currIndex, leaf);
+
+        currIndex >>= 1;
+        for (uint currLayer = 1; currLayer < 31; currLayer++) {
             // input[1 + i] is path[i]
-            setNode(currLayer, currIndex, input[1 + currLayer]);
-            if (currLayer < 30) {
-                // input[33 + i] is others[i]
-                // input[63 + i] is dirs[i]
-                require(
-                    getNode(currLayer, currIndex ^ 1) == input[33 + currLayer],
-                    "Sibling path does not match"
-                );
-                require(
-                    input[63 + currLayer] == (currIndex & 1),
-                    "Sibling direction does not match"
-                );
-            }
+            setNode(
+                currLayer,
+                currIndex,
+                hashLeftRight(
+                    hasher,
+                    getNode(currLayer - 1, currIndex << 1),
+                    getNode(currLayer - 1, (currIndex << 1) | 1)
+                )
+            );
             currIndex = currIndex >> 1;
         }
 
-        merkleRoot = input[0];
+        merkleRoot = getNode(30, 0);
     }
 
-    function deposit(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[93] memory input
-    ) public payable nonReentrant {
+    function deposit(uint leaf) public payable nonReentrant {
         require(msg.value == 0.1 ether, "Deposit must be 0.1 ether");
-        depositUpdate(a, b, c, input);
+        depositUpdate(leaf);
     }
 
     function withdrawUpdate(
@@ -99,13 +96,10 @@ contract Hurricane is ReentrancyGuard {
         uint[2] memory c,
         uint[4] memory input
     ) internal {
->>>>>>> 5ea6cf70fbccbd1e14fa8438416e1df3bebdbcda
-        require(withdrawVerifier.verifyProof(a, b, c, input), "withdraw proof is invalid");
+        require(verifyProof(a, b, c, input), "withdraw proof is invalid");
         require(input[0] == merkleRoot, "merkle root does not match");
         require(input[2] == 0, "MIMC K must be zero");
 		
-		console.log("Proof OK");
-
         uint nullifier = input[1];
         require(!nullifiers[nullifier], "Nullifier is already used");
         nullifiers[nullifier] = true;
@@ -129,14 +123,11 @@ contract Hurricane is ReentrancyGuard {
         uint[2][2] memory senderB,
         uint[2] memory senderC,
         uint[4] memory senderInput,
-        uint[2] memory receiverA,
-        uint[2][2] memory receiverB,
-        uint[2] memory receiverC,
-        uint[93] memory receiverInput
+        uint receiverLeaf
     ) public nonReentrant {
-        require(senderInput[3] == receiverInput[1], "Receiver does not match");
+        require(senderInput[3] == receiverLeaf, "Receiver does not match");
         withdrawUpdate(senderA, senderB, senderC, senderInput);
-        depositUpdate(receiverA, receiverB, receiverC, receiverInput);
+        depositUpdate(receiverLeaf);
     }
 
     function getPath(uint idx) public view returns (uint[30] memory siblings, uint[30] memory dirs) {

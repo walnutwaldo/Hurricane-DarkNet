@@ -57,7 +57,7 @@ export function WithdrawSection() {
         } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
-        // console.log("publicSignals", publicSignals);
+        console.log("publicSignals", publicSignals);
     }
 
     const withdrawArgs = (proof && publicSignals) ? [
@@ -128,7 +128,7 @@ export function WithdrawSection() {
                             (                                <PrimaryButton onClick={() => {
                                         makeWithdrawal();
                                     }} disabled={isWithdrawing}>
-                                        Withdraw 1 ETH
+                                        Withdraw 0.1 ETH
                                     </PrimaryButton>
                                 )
                         )}

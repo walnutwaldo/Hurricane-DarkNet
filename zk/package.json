@@ -3,7 +3,7 @@
   "scripts": {
     "circom:dev": "npx hardhat circom --verbose --deterministic",
     "circom:build": "npx hardhat circom --verbose",
-    "circom:init": "curl https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_15.ptau -o circuits/pot15_final.ptau"
+    "circom:init": "curl https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_18.ptau -o circuits/pot18_final.ptau"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
+    "circomlib": "^2.0.5",
     "dotenv": "^16.0.1",
+    "ffjavascript": "^0.2.55",
     "hardhat-circom": "^3.3.1"
   }
 }
