@@ -1,12 +1,10 @@
 pragma solidity ^0.8.0;
-
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./depositor.groth16_verifier.sol";
 import "./verifier.groth16_verifier.sol";
 
 
-contract DB is ERC20, Verifier {
+contract DB is Verifier {
     uint256 size = 0;
     uint256 constant HEIGHT = 30;
     bytes32[][] merkleTree;
