@@ -49,25 +49,6 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "input",
-        "type": "uint256"
-      }
-    ],
-    "name": "dummyFunction",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "output",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "idx",
         "type": "uint256"
       }
@@ -83,6 +64,25 @@
         "internalType": "uint256[30]",
         "name": "dirs",
         "type": "uint256[30]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "indexOfLeaf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

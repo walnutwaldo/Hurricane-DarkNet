@@ -3,13 +3,15 @@ pragma circom 2.0.6;
 include "circomlib/mimc.circom";
 
 template Depositor (nLayers, nRounds) {
-    signal input secret; 
-    signal input address;
+    signal output merkleRoot;
+    signal output path[nLayers+1];
+
     signal input mimcK;
     signal input others[nLayers];
     signal input dir[nLayers]; // 0 for left, 1 for right
-    signal output merkleRoot;
-    signal output path[nLayers+1];
+
+    // Private
+    signal input secret;
 
     component hash0 = MiMC7(nRounds);
     component hash[nLayers];

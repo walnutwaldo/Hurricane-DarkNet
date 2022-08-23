@@ -7,8 +7,11 @@ contract DummyHurricane {
 
     DepositVerifier public depositVerifier;
     WithdrawVerifier public withdrawVerifier;
+
     uint public merkleRoot;
     uint public numLeaves;
+
+    mapping(uint => uint) public indexOfLeaf;
 
     constructor() public {
         depositVerifier = new DepositVerifier();
@@ -23,6 +26,8 @@ contract DummyHurricane {
     ) public payable {
         require(msg.value == 1 ether, "deposit must be 1 ether");
         require(depositVerifier.verifyProof(a, b, c, input), "deposit proof is invalid");
+        indexOfLeaf[input[1]] = numLeaves++;
+        merkleRoot = input[0];
     }
 
     function withdraw(
@@ -44,7 +49,4 @@ contract DummyHurricane {
         return (siblings, dirs);
     }
 
-    function dummyFunction(uint input) public view returns (uint output) {
-        return input;
-    }
 }

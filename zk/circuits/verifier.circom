@@ -4,13 +4,16 @@ include "circomlib/mimc.circom";
 include "circomlib/poseidon.circom";
 
 template Verifier (nLayers, nRounds) {
-    signal input secret; 
-    signal input address;
-    signal input mimcK;
-    signal input others[nLayers];
-    signal input dir[nLayers]; // 0 for left, 1 for right
     signal output merkleRoot;
     signal output poseidonHash;
+
+    signal input mimcK;
+
+    // Secret
+    signal input secret; 
+    signal input address;
+    signal input others[nLayers];
+    signal input dir[nLayers]; // 0 for left, 1 for right
     
     signal path[nLayers+1];
 
