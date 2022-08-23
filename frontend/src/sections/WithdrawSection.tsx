@@ -34,7 +34,7 @@ export function WithdrawSection() {
     ] = useState<string[] | undefined>(undefined);
 
     async function runProof() {
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(deposit!.secret, "0", 91)));
+        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(deposit!.secret, "0",)));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
 
@@ -55,7 +55,7 @@ export function WithdrawSection() {
         } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
-        // console.log("publicSignals", publicSignals);
+        console.log("publicSignals", publicSignals);
     }
 
     const withdrawArgs = (proof && publicSignals) ? [
@@ -104,7 +104,7 @@ export function WithdrawSection() {
                                     <PrimaryButton onClick={() => {
                                         makeWithdrawal();
                                     }} disabled={isWithdrawing}>
-                                        Withdraw 1 ETH
+                                        Withdraw 0.1 ETH
                                     </PrimaryButton>
                                 )
                             )}

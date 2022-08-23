@@ -104,7 +104,7 @@ function exp(a: typeof BigNumber | number, n: typeof BigNumber | number): typeof
 	return (n & 1 ? (a.mul(b)).mod(P) : b);
 };
 
-export default function mimc(input: typeof BigNumber | string | number, k: typeof BigNumber | string | number, rounds: number): typeof BigNumber {
+export default function mimc(input: typeof BigNumber | string | number, k: typeof BigNumber | string | number, rounds: number = 91): typeof BigNumber {
     input = BigNumber.from(input);
     k = BigNumber.from(k);
 
