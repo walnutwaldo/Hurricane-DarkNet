@@ -99,7 +99,7 @@ contract Hurricane is ReentrancyGuard, Verifier {
         require(verifyProof(a, b, c, input), "withdraw proof is invalid");
         require(input[0] == merkleRoot, "merkle root does not match");
         require(input[2] == 0, "MIMC K must be zero");
-
+		
         uint nullifier = input[1];
         require(!nullifiers[nullifier], "Nullifier is already used");
         nullifiers[nullifier] = true;
