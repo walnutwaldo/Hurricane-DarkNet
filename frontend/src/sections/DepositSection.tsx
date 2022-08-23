@@ -30,19 +30,14 @@ export function DepositSection() {
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
 
-    const numLeavesData = useContractRead({
-        addressOrName: contractAddress,
-        contractInterface: HURRICANE_CONTRACT_ABI,
-        functionName: 'numLeaves',
-    });
-    const numLeaves = numLeavesData.data;
-
     async function runProof() {
+		const numLeaves = await contract.numLeaves();
+
         const siblingsData = await contract.getPath(numLeaves);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
-        // console.log("siblings", siblingsData);
-        // console.log("dir", dir);
+        console.log("siblings", siblingsData);
+        console.log("dir", dir);
         const input = {
             secret: secret!.toString(),
             mimcK: "0",
