@@ -120,7 +120,7 @@ export default function Content() {
             {deposits.length > 0 && <DepositsSection/>}
             <div className="grid grid-cols-2 gap-2">
                 <DepositSection/>
-                {deposits.length >= 1 && <WithdrawSection/>}
+                <WithdrawSection/>
             </div>
         </SecretContext.Provider>
     );

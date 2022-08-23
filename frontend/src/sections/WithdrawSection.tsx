@@ -4,6 +4,7 @@ import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
+import mimc from "../crypto/mimc";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -36,6 +37,10 @@ export function WithdrawSection() {
         const siblingsData = await contract.getPath(await contract.indexOfLeaf(deposit!.leaf));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
+
+        console.log("leaf", deposit!.leaf);
+        console.log("mimc", mimc(deposit!.secret, "0"));
+
         // console.log("siblings", siblingsData);
         // console.log("dir", dir);
         const input = {
