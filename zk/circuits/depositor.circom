@@ -38,6 +38,5 @@ template Depositor (nLayers, nRounds) {
     merkleRoot <== path[nLayers];
 }
 
-component main { public [mimcK, others, dir] } = Depositor(30, 91);
 
 

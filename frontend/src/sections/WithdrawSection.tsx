@@ -1,6 +1,6 @@
 import React, {useContext, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useSigner} from "wagmi";
+import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
@@ -11,12 +11,16 @@ const {groth16, zKey} = snarkjs;
 export function WithdrawSection() {
     const {deposits, removeDeposit} = useContext(SecretContext);
 
+    const { chain, chains } = useNetwork()
+
+    const contractAddress = HURRICANE_CONTRACT_ADDRESS[chain!.name.toLowerCase()];
+
     const deposit = deposits.length > 0 ? deposits[0] : undefined;
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
     const {data: signer, isError, isLoading} = useSigner()
-    const contract = new Contract(HURRICANE_CONTRACT_ADDRESS, HURRICANE_CONTRACT_ABI, signer!);
+    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -43,7 +47,7 @@ export function WithdrawSection() {
         const {
             proof,
             publicSignals
-        } = await groth16.fullProve(input, "circuit/verifier.wasm", "circuit/verifier.zkey");
+        } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
         // console.log("publicSignals", publicSignals);

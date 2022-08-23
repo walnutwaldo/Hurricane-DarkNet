@@ -1,8 +1,8 @@
 pragma solidity ^0.6.11;
 
-import "./VerifierVerifier.sol";
-import "./DepositorVerifier.sol";
 import "./ReentrancyGuard.sol";
+import "./DepositorBigVerifier.sol";
+import "./WithdrawerBigVerifier.sol";
 
 contract Hurricane is ReentrancyGuard {
 

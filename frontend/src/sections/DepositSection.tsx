@@ -1,6 +1,6 @@
 import React, {useContext, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useSigner} from "wagmi";
+import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
@@ -11,9 +11,14 @@ const {groth16, zKey} = snarkjs;
 export function DepositSection() {
     const {secret, setSecret, addDeposit} = useContext(SecretContext);
     const [generatingProof, setGeneratingProof] = useState(false);
+    const { chain, chains } = useNetwork()
+
+    const contractAddress = HURRICANE_CONTRACT_ADDRESS[chain!.name.toLowerCase()];
+
+    console.log("chain name", chain?.name);
 
     const {data: signer, isError, isLoading} = useSigner()
-    const contract = new Contract(HURRICANE_CONTRACT_ADDRESS, HURRICANE_CONTRACT_ABI, signer!);
+    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -26,7 +31,7 @@ export function DepositSection() {
     ] = useState<string[] | undefined>(undefined);
 
     const numLeavesData = useContractRead({
-        addressOrName: HURRICANE_CONTRACT_ADDRESS,
+        addressOrName: contractAddress,
         contractInterface: HURRICANE_CONTRACT_ABI,
         functionName: 'numLeaves',
     });
@@ -47,7 +52,7 @@ export function DepositSection() {
         const {
             proof,
             publicSignals
-        } = await groth16.fullProve(input, "circuit/depositor.wasm", "circuit/depositor.zkey");
+        } = await groth16.fullProve(input, "circuit/depositor_big.wasm", "circuit/depositor_big.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
         console.log("proof", JSON.stringify(proof, null, '\t'));
