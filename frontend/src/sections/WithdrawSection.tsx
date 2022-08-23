@@ -39,7 +39,7 @@ export function WithdrawSection() {
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
 
         console.log("leaf", deposit!.leaf);
-        console.log("mimc", mimc(deposit!.secret, "0"));
+        console.log("mimc", mimc(deposit!.secret, "0", 91));
 
         // console.log("siblings", siblingsData);
         // console.log("dir", dir);
