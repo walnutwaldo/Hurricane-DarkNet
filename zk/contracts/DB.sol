@@ -2,8 +2,8 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./DepositVerifier.sol";
-import "./WithdrawalVerifier.sol";
+import "./depositor.groth16_verifier.sol";
+import "./verifier.groth16_verifier.sol";
 
 
 contract DB is ERC20, Verifier {
@@ -55,7 +55,7 @@ contract DB is ERC20, Verifier {
             uint[2][2] memory b,
             uint[2] memory c,
             uint[93] memory input, uint256 memory index, uint256[HEIGHT] memory path) external payable noReentrant {
-        require(DepositVerifier.verifyProof(a, b, c, input), "Invalid Deposit Proof");
+        require(depositor.groth16_verifier(a, b, c, input), "Invalid Deposit Proof");
         uint256 index = size;
         size++;
         
@@ -67,7 +67,6 @@ contract DB is ERC20, Verifier {
 
         emit Deposit(size);
         require(msg.value == 1 ether, "deposit must be 1 ether");
-        require(depositVerifier.verifyProof(a, b, c, input), "deposit proof is invalid");
        //  IERC20(ETH_ADDRESS).transferFrom(msg.sender, address(this), 1);
     }
 
@@ -77,7 +76,7 @@ contract DB is ERC20, Verifier {
             uint[93] memory input, bytes32 memory merkleRoot, bytes32 memory nullifier) external noReentrant {
         require(nullifiers[nullifier]!= true, "Token Already Spent");
         require(merkleRoot == merkleTree[0][merkleTree.length-1]);
-        require(WithdrawVerifier.verifyProof(a, b, c, input));
+        require(verifier.groth16_verifier.verifyProof(a, b, c, input));
         nullifers[nullifier]= true;
         emit Withdraw(nullifer);
         //IERC20(ETH_ADDRESS).transferFrom(address, msg.sender, address(this));

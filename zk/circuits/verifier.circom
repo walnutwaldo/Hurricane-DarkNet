@@ -5,6 +5,7 @@ include "circomlib/poseidon.circom";
 
 template Verifier (nLayers, nRounds) {
     signal input secret; 
+    signal input address;
     signal input mimcK;
     signal input others[nLayers];
     signal input dir[nLayers]; // 0 for left, 1 for right
