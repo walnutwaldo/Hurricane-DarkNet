@@ -5,7 +5,7 @@ import {PrimaryButton, SecondaryButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
 
-const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 function SecretDisplay(props: any) {
     const {secret} = props;
