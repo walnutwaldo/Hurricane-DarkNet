@@ -5,6 +5,7 @@ import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
+import InlineLoader from "../components/InlineLoader";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -12,7 +13,7 @@ const {groth16, zKey} = snarkjs;
 export function WithdrawSection() {
     const {deposits, removeDeposit} = useContext(SecretContext);
 
-    const { chain, chains } = useNetwork()
+    const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
@@ -38,7 +39,7 @@ export function WithdrawSection() {
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
 
-		console.log(siblingsData);
+        console.log(siblingsData);
 
         // console.log("siblings", siblingsData);
         // console.log("dir", dir);
@@ -69,11 +70,19 @@ export function WithdrawSection() {
     ] : [];
 
     const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeWithdrawal() {
         setIsWithdrawing(true);
-        const tx = await contract.withdraw(...withdrawArgs);
-        console.log("tx", tx);
+
+        setIsPreparingTxn(true);
+        const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
+            console.log(err);
+            setIsWithdrawing(false);
+            setIsPreparingTxn(false);
+        });
+        setIsPreparingTxn(false);
+
         const result = await tx.wait();
         setIsWithdrawing(false);
         if (result.status) {
@@ -99,21 +108,30 @@ export function WithdrawSection() {
                             }} disabled={generatingProof}>
                                 Generate Proof
                             </PrimaryButton>
-                            {proof && (
-                                (
-                                    <PrimaryButton onClick={() => {
-                                        makeWithdrawal();
-                                    }} disabled={isWithdrawing}>
-                                        Withdraw 0.1 ETH
-                                    </PrimaryButton>
+                            {proof &&
+                                (<>
+                                        <PrimaryButton onClick={() => {
+                                            makeWithdrawal();
+                                        }} disabled={isWithdrawing}>
+                                            {
+                                                isWithdrawing ?
+                                                    <span>Withdrawing <InlineLoader/></span> : "Withdraw 0.1 ETH"
+                                            }
+                                        </PrimaryButton>
+                                        {isPreparingTxn && (
+                                            <span>
+                                                Preparing transaction <InlineLoader/>
+                                            </span>
+                                        )}
+                                    </>
                                 )
-                            )}
+                            }
                         </div>
 
                         <div>
                             {
                                 generatingProof ? (
-                                    <span>Generating Proof ...</span>
+                                    <span>Generating Proof <InlineLoader/></span>
                                 ) : (
                                     <div>
                                         {

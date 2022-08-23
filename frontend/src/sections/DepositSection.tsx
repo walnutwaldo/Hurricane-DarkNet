@@ -5,6 +5,7 @@ import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
+import InlineLoader from "../components/InlineLoader";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -29,6 +30,10 @@ export function DepositSection() {
         const leaf = mimc(secret, "0");
         const tx = await contract.deposit(leaf, {
             value: ethers.utils.parseEther('0.1')
+        }).catch((err: any) => {
+            console.log(err);
+            setIsDepositing(false);
+            setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
 
@@ -55,12 +60,14 @@ export function DepositSection() {
                                 <PrimaryButton onClick={() => {
                                     makeDeposit();
                                 }} disabled={isDepositing}>
-                                    Deposit 0.1 ETH
+                                    {
+                                        isDepositing ? <span>Depositing <InlineLoader/></span> : "Deposit 0.1 ETH"
+                                    }
                                 </PrimaryButton>
                             </div>
                             {isPreparingTxn && (
                                 <div>
-                                    Preparing transaction ...
+                                    Preparing transaction <InlineLoader/>
                                 </div>
                             )}
                         </div>
