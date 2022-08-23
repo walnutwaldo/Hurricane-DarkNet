@@ -98,19 +98,19 @@ var P = BigNumber.from("21888242871839275222246405745257275088548364400416034343
 
 function exp(a: typeof BigNumber | number, n: typeof BigNumber | number): typeof BigNumber {
 	if (n === 0) {
-		return 1;
+		return BigNumber.from("1");
 	}
-	var b: typeof BigNumber = exp((a * a) % P, n/2);
-	return (n & 1 ? (a * b) % P : b);
+	var b: typeof BigNumber = exp((a.mul(a)).mod(P), n/2);
+	return (n & 1 ? (a.mul(b)).mod(P) : b);
 };
 
 export default function mimc(input: typeof BigNumber | string | number, k: typeof BigNumber | string | number, rounds: number): typeof BigNumber {
     input = BigNumber.from(input);
     k = BigNumber.from(k);
 
-	var t: typeof BigNumber = (k + input) % P;
+	var t: typeof BigNumber = (k.add(input)).mod(P);
 	for (var i: number = 1; i < rounds; i++) {
-		t = (exp(t, 7) + k + c[i]) % P;
+		t = ((exp(t, 7).add(k)).add(c[i])).mod(P);
 	}
-    return (exp(t, 7) + k) % P;
+    return (exp(t, 7).add(k)).mod(P);
 };
