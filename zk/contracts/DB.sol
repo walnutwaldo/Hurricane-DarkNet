@@ -81,7 +81,7 @@ contract DB is ERC20, Verifier {
             uint[2][2] memory b,
             uint[2] memory c,
             uint[3] memory input) external noReentrant {
-        bytes root = bytes32(input[1]);
+        bytes32 root = bytes32(input[1]);
         bytes32 nullifer = bytes32(input[2]);
 
         require(nullifiers[nullifier]!= true, "Token Already Spent");
