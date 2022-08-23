@@ -137,6 +137,54 @@
     "inputs": [
       {
         "internalType": "uint256[2]",
+        "name": "senderA",
+        "type": "uint256[2]"
+      },
+      {
+        "internalType": "uint256[2][2]",
+        "name": "senderB",
+        "type": "uint256[2][2]"
+      },
+      {
+        "internalType": "uint256[2]",
+        "name": "senderC",
+        "type": "uint256[2]"
+      },
+      {
+        "internalType": "uint256[4]",
+        "name": "senderInput",
+        "type": "uint256[4]"
+      },
+      {
+        "internalType": "uint256[2]",
+        "name": "receiverA",
+        "type": "uint256[2]"
+      },
+      {
+        "internalType": "uint256[2][2]",
+        "name": "receiverB",
+        "type": "uint256[2][2]"
+      },
+      {
+        "internalType": "uint256[2]",
+        "name": "receiverC",
+        "type": "uint256[2]"
+      },
+      {
+        "internalType": "uint256[93]",
+        "name": "receiverInput",
+        "type": "uint256[93]"
+      }
+    ],
+    "name": "transfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[2]",
         "name": "a",
         "type": "uint256[2]"
       },
@@ -151,9 +199,9 @@
         "type": "uint256[2]"
       },
       {
-        "internalType": "uint256[3]",
+        "internalType": "uint256[4]",
         "name": "input",
-        "type": "uint256[3]"
+        "type": "uint256[4]"
       }
     ],
     "name": "withdraw",

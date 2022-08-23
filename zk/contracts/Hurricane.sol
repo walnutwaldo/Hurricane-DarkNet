@@ -4,8 +4,6 @@ import "./ReentrancyGuard.sol";
 import "./DepositorBigVerifier.sol";
 import "./WithdrawerBigVerifier.sol";
 
-import "hardhat/console.sol";
-
 contract Hurricane is ReentrancyGuard {
 
     DepositVerifier public depositVerifier;
@@ -44,13 +42,12 @@ contract Hurricane is ReentrancyGuard {
         }
     }
 
-    function deposit(
+    function depositUpdate(
         uint[2] memory a,
         uint[2][2] memory b,
         uint[2] memory c,
         uint[93] memory input
-    ) public payable nonReentrant {
-        require(msg.value == 0.1 ether, "Deposit must be 0.1 ether");
+    ) internal {
         require(depositVerifier.verifyProof(a, b, c, input), "Deposit proof is invalid");
 
         uint newMerkleRoot = input[0];
@@ -86,13 +83,23 @@ contract Hurricane is ReentrancyGuard {
         merkleRoot = input[0];
     }
 
-    function withdraw(
+    function deposit(
         uint[2] memory a,
         uint[2][2] memory b,
         uint[2] memory c,
-        uint[3] memory input
-    ) public nonReentrant {
-		console.log("Proof Starting");
+        uint[93] memory input
+    ) public payable nonReentrant {
+        require(msg.value == 0.1 ether, "Deposit must be 0.1 ether");
+        depositUpdate(a, b, c, input);
+    }
+
+    function withdrawUpdate(
+        uint[2] memory a,
+        uint[2][2] memory b,
+        uint[2] memory c,
+        uint[4] memory input
+    ) internal {
+>>>>>>> 5ea6cf70fbccbd1e14fa8438416e1df3bebdbcda
         require(withdrawVerifier.verifyProof(a, b, c, input), "withdraw proof is invalid");
         require(input[0] == merkleRoot, "merkle root does not match");
         require(input[2] == 0, "MIMC K must be zero");
@@ -102,9 +109,34 @@ contract Hurricane is ReentrancyGuard {
         uint nullifier = input[1];
         require(!nullifiers[nullifier], "Nullifier is already used");
         nullifiers[nullifier] = true;
+    }
+
+    function withdraw(
+        uint[2] memory a,
+        uint[2][2] memory b,
+        uint[2] memory c,
+        uint[4] memory input
+    ) public nonReentrant {
+        require(uint160(input[3]) == uint160(msg.sender), "Receiver does not match");
+        withdrawUpdate(a, b, c, input);
 
         (bool success, bytes memory data) = msg.sender.call{value : 0.1 ether}("");
         require(success, "withdraw failed");
+    }
+
+    function transfer(
+        uint[2] memory senderA,
+        uint[2][2] memory senderB,
+        uint[2] memory senderC,
+        uint[4] memory senderInput,
+        uint[2] memory receiverA,
+        uint[2][2] memory receiverB,
+        uint[2] memory receiverC,
+        uint[93] memory receiverInput
+    ) public nonReentrant {
+        require(senderInput[3] == receiverInput[1], "Receiver does not match");
+        withdrawUpdate(senderA, senderB, senderC, senderInput);
+        depositUpdate(receiverA, receiverB, receiverC, receiverInput);
     }
 
     function getPath(uint idx) public view returns (uint[30] memory siblings, uint[30] memory dirs) {
