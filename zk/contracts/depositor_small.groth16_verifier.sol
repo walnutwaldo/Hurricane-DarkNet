@@ -13,7 +13,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.6.11;
 
-import "Pairing.sol";
+import "./Pairing.sol";
 
 contract Verifier {
     using Pairing for *;
