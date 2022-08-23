@@ -1,12 +1,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC1120/ERC1120.sol";
 import "./depositor.groth16_verifier.sol";
 import "./verifier.groth16_verifier.sol";
 
 
-contract DB is ERC20, Verifier {
+contract DB is ERC1120, Verifier {
     uint256 size = 0;
     uint256 constant HEIGHT = 4;
     bytes32[][] merkleTree;
@@ -30,7 +30,16 @@ contract DB is ERC20, Verifier {
             merkleTree.push(layer);
         }
     }
-
+    function transfer(uint[2] memory a,
+            uint[2][2] memory b,
+            uint[2] memory c,
+            uint[93] memory input, bytes32 memory merkleRoot, bytes32 memory nullifier, 
+            uint[2] memory a1,
+            uint[2][2] memory b1,
+            uint[2] memory c1,
+            uint[93] memory input1, uint256 memory index, uint256[HEIGHT] memory path){
+            
+    }
     function getPath(uint256 index) public view returns (Path){
         bytes32[] hashes;
         bool[] directions;
@@ -54,7 +63,7 @@ contract DB is ERC20, Verifier {
     function deposit(uint[2] memory a,
             uint[2][2] memory b,
             uint[2] memory c,
-            uint[93] memory input, uint256 memory index, uint256[HEIGHT] memory path) external payable noReentrant {
+            uint[93] memory input, uint256 memory index, uint256[HEIGHT] memory path) private payable noReentrant {
         require(depositor.groth16_verifier(a, b, c, input), "Invalid Deposit Proof");
         uint256 index = size;
         size++;
