@@ -81,6 +81,7 @@ export function DepositSection() {
                 leaf: BigNumber.from(publicSignals![1])
             });
             setSecret?.(undefined);
+			setProof?.(undefined);
         }
     }
 

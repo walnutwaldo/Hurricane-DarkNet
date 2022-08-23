@@ -9,11 +9,11 @@ import {useSigner} from "wagmi";
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 function SecretDisplay(props: any) {
-    const {secret} = props;
+    const {secret, idx, rm} = props;
     const [enableCopy, setEnableCopy] = useState(true);
 
     return (
-        <div className={"flex flex-row gap-2"}>
+        isNaN(idx) ? <div className={"flex flex-row gap-5"}>
             <SecondaryButton onClick={() => {
                 // Copy secret.toHexString() to clipboard
                 navigator.clipboard.writeText(secret!.toHexString());
@@ -24,6 +24,26 @@ function SecretDisplay(props: any) {
             }} disabled={!enableCopy}>
                 {enableCopy ? "Copy" : "Copied!"}
             </SecondaryButton>
+            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                {secret.toHexString()}
+            </span>
+        </div> : <div className={"flex flex-row gap-5"}>
+            <SecondaryButton onClick={() => {
+                // Copy secret.toHexString() to clipboard
+                navigator.clipboard.writeText(secret!.toHexString());
+                setEnableCopy(false);
+                setTimeout(() => {
+                    setEnableCopy(true);
+                }, 1000);
+            }} disabled={!enableCopy}>
+                {enableCopy ? "Copy" : "Copied!"}
+            </SecondaryButton>
+			<SecondaryButton onClick={() => {
+					// Delete secret
+					rm!(idx);
+			}}>
+				Delete
+			</SecondaryButton>
             <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
                 {secret.toHexString()}
             </span>
@@ -55,7 +75,7 @@ function GenerateSecretSection() {
 }
 
 function DepositsSection() {
-    const {deposits} = useContext(SecretContext);
+    const {deposits, removeDeposit} = useContext(SecretContext);
 
     return (<div className={"mb-3"}>
         <h3 className={"text-lg text-black font-bold"}>
@@ -66,7 +86,7 @@ function DepositsSection() {
                 deposits.map(function (deposit, idx) {
                     return (
                         <div key={idx}>
-                            <SecretDisplay secret={deposit.secret}/>
+                            <SecretDisplay secret={deposit.secret} idx={idx} rm={removeDeposit}/>
                         </div>
                     )
                 })
