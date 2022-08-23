@@ -13,7 +13,7 @@ const {groth16, zKey} = snarkjs;
 
 const HURRICANE_CONTRACT_ADDRESS = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6";
 
-const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 function GenerateSecretSection() {
     const {secret, setSecret} = useContext(SecretContext);
