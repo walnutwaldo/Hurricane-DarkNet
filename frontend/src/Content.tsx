@@ -4,6 +4,7 @@ import SecretContext, {Deposit} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
+import {useSigner} from "wagmi";
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -79,6 +80,9 @@ const DEPOSITS_LOCALHOST_KEY = 'hurricane_deposits';
 export default function Content() {
     const [secret, setSecret] = useState<BigNumber | undefined>(undefined);
 
+    const {data: signer, isError, isLoading} = useSigner();
+    console.log("signer", signer);
+
     const [deposits, setDeposits] = useState(
         JSON.parse(localStorage.getItem(DEPOSITS_LOCALHOST_KEY) || '[]').map((depositJson: any) => ({
             secret: BigNumber.from(depositJson.secret),
@@ -118,10 +122,12 @@ export default function Content() {
         }}>
             <GenerateSecretSection/>
             {deposits.length > 0 && <DepositsSection/>}
-            <div className="grid grid-cols-2 gap-2">
+            {signer ? <div className="grid grid-cols-2 gap-2">
                 <DepositSection/>
                 <WithdrawSection/>
-            </div>
+            </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
+                Connect your wallet to be able to interact with Hurricane.
+            </div>}
         </SecretContext.Provider>
     );
 }

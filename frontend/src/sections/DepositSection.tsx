@@ -13,7 +13,7 @@ export function DepositSection() {
     const [generatingProof, setGeneratingProof] = useState(false);
     const { chain, chains } = useNetwork()
 
-    const contractAddress = HURRICANE_CONTRACT_ADDRESS[chain!.name.toLowerCase()];
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
     console.log("chain name", chain?.name);
 
