@@ -4,6 +4,8 @@ import "./ReentrancyGuard.sol";
 import "./DepositorBigVerifier.sol";
 import "./WithdrawerBigVerifier.sol";
 
+import "hardhat/console.sol";
+
 contract Hurricane is ReentrancyGuard {
 
     DepositVerifier public depositVerifier;
@@ -48,7 +50,7 @@ contract Hurricane is ReentrancyGuard {
         uint[2] memory c,
         uint[93] memory input
     ) public payable nonReentrant {
-        require(msg.value == 1 ether, "Deposit must be 1 ether");
+        require(msg.value == 0.1 ether, "Deposit must be 0.1 ether");
         require(depositVerifier.verifyProof(a, b, c, input), "Deposit proof is invalid");
 
         uint newMerkleRoot = input[0];
@@ -90,15 +92,18 @@ contract Hurricane is ReentrancyGuard {
         uint[2] memory c,
         uint[3] memory input
     ) public nonReentrant {
+		console.log("Proof Starting");
         require(withdrawVerifier.verifyProof(a, b, c, input), "withdraw proof is invalid");
         require(input[0] == merkleRoot, "merkle root does not match");
         require(input[2] == 0, "MIMC K must be zero");
+		
+		console.log("Proof OK");
 
         uint nullifier = input[1];
         require(!nullifiers[nullifier], "Nullifier is already used");
         nullifiers[nullifier] = true;
 
-        (bool success, bytes memory data) = msg.sender.call{value : 1 ether}("");
+        (bool success, bytes memory data) = msg.sender.call{value : 0.1 ether}("");
         require(success, "withdraw failed");
     }
 
