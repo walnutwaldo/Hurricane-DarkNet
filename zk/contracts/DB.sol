@@ -45,7 +45,7 @@ contract DB is ERC20, Verifier {
                 hashes.push(layer[index]);
                 directions.push(false);
             }
-            curr = curr/2;
+            curr >>= 1;
         }
         Path path = Path(hashes, direction);
         return path;
@@ -61,7 +61,7 @@ contract DB is ERC20, Verifier {
         
         for (uint i = 0; i<HEIGHT+1; i++){
             merkleTree[index][i] = path[i];
-            index = index/2;
+            index >>= 1;
         }
         merkleRoot = path[HEIGHT];
 
