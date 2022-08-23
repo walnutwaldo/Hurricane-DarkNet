@@ -1,14 +1,17 @@
 pragma solidity ^0.6.11;
 
-import "./depositor.groth16_verifier.sol";
-import "./verifier.groth16_verifier.sol";
+import "./VerifierVerifier.sol";
+import "./DepositorVerifier.sol";
 
 contract DummyHurricane {
 
     DepositVerifier public depositVerifier;
     WithdrawVerifier public withdrawVerifier;
+
     uint public merkleRoot;
     uint public numLeaves;
+
+    mapping(uint => uint) public indexOfLeaf;
 
     constructor() public {
         depositVerifier = new DepositVerifier();
@@ -23,6 +26,8 @@ contract DummyHurricane {
     ) public payable {
         require(msg.value == 1 ether, "deposit must be 1 ether");
         require(depositVerifier.verifyProof(a, b, c, input), "deposit proof is invalid");
+        indexOfLeaf[input[1]] = numLeaves++;
+        merkleRoot = input[0];
     }
 
     function withdraw(
@@ -38,7 +43,7 @@ contract DummyHurricane {
 
     function getPath(uint idx) public view returns (uint[30] memory siblings, uint[30] memory dirs) {
         for (uint i = 0; i < 30; i++) {
-            siblings[i] = 0;
+            siblings[i] = idx;
             dirs[i] = i % 2;
         }
         return (siblings, dirs);

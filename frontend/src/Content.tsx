@@ -1,18 +1,34 @@
-import React, {useContext, useState} from 'react';
-import {
-    useContractRead,
-} from "wagmi";
+import React, {useContext, useReducer, useState} from 'react';
 import {BigNumber} from "ethers";
-import SecretContext from './contexts/SecretContext';
+import SecretContext, {Deposit} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton} from "./components/buttons";
-import HURRICANE_CONTRACT_ABI from "./contracts/hurricane_abi.json";
+import {DepositSection} from "./sections/DepositSection";
+import {WithdrawSection} from "./sections/WithdrawSection";
 
-// @ts-ignore
-const {groth16, zKey} = snarkjs;
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-const HURRICANE_CONTRACT_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+function SecretDisplay(props: any) {
+    const {secret} = props;
+    const [enableCopy, setEnableCopy] = useState(true);
 
-const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
+    return (
+        <div className={"flex flex-row gap-2"}>
+            <SecondaryButton onClick={() => {
+                // Copy secret.toHexString() to clipboard
+                navigator.clipboard.writeText(secret!.toHexString());
+                setEnableCopy(false);
+                setTimeout(() => {
+                    setEnableCopy(true);
+                }, 1000);
+            }} disabled={!enableCopy}>
+                {enableCopy ? "Copy" : "Copied!"}
+            </SecondaryButton>
+            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                {secret.toHexString()}
+            </span>
+        </div>
+    )
+}
 
 function GenerateSecretSection() {
     const {secret, setSecret} = useContext(SecretContext);
@@ -22,7 +38,7 @@ function GenerateSecretSection() {
         <h3 className={"text-lg text-black font-bold"}>
             GENERATE A SECRET
         </h3>
-        <div className={"flex flex-row gap-2"}>
+        <div className="flex flex-row gap-2">
             <PrimaryButton onClick={() => {
                 const randomBytes = crypto.getRandomValues(new Uint32Array(10));
                 // Concatenate into hex string
@@ -32,169 +48,80 @@ function GenerateSecretSection() {
             }}>
                 Generate
             </PrimaryButton>
+            {(secret !== undefined) && (<SecretDisplay secret={secret}/>)}
+        </div>
+    </div>)
+}
+
+function DepositsSection() {
+    const {deposits} = useContext(SecretContext);
+
+    return (<div className={"mb-3"}>
+        <h3 className={"text-lg text-black font-bold"}>
+            YOUR DEPOSITS
+        </h3>
+        <div>
             {
-                (secret !== undefined) && (
-                    <>
-                        <SecondaryButton onClick={() => {
-                            // Copy secret.toHexString() to clipboard
-                            navigator.clipboard.writeText(secret.toHexString());
-                            setEnableCopy(false);
-                            setTimeout(() => {
-                                setEnableCopy(true);
-                            }, 1000);
-                        }} disabled={!enableCopy}>
-                            {enableCopy ? "Copy" : "Copied!"}
-                        </SecondaryButton>
-                        <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                                {secret.toHexString()}
-                            </span>
-                    </>
-                )
+                deposits.map(function (deposit, idx) {
+                    return (
+                        <div key={idx}>
+                            <SecretDisplay secret={deposit.secret}/>
+                        </div>
+                    )
+                })
             }
         </div>
     </div>)
 }
 
-function DepositSection() {
-    const {secret, setSecret} = useContext(SecretContext);
-    const [generatingProof, setGeneratingProof] = useState(false);
+const DEPOSITS_LOCALHOST_KEY = 'hurricane_deposits';
 
-    const [proof, setProof] = useState<{
-        pi_a: [string, string],
-        pi_b: [[string, string], [string, string]],
-        pi_c: [string, string],
-    } | undefined>(undefined);
-    const [
-        publicSignals,
-        setPublicSignals
-    ] = useState<string[] | undefined>(undefined);
+export default function Content() {
+    const [secret, setSecret] = useState<BigNumber | undefined>(undefined);
 
-    const numLeavesData = useContractRead({
-        addressOrName: HURRICANE_CONTRACT_ADDRESS,
-        contractInterface: HURRICANE_CONTRACT_ABI,
-        functionName: 'numLeaves',
-    });
-    const numLeaves = numLeavesData.data;
+    const [deposits, setDeposits] = useState(
+        JSON.parse(localStorage.getItem(DEPOSITS_LOCALHOST_KEY) || '[]').map((depositJson: any) => ({
+            secret: BigNumber.from(depositJson.secret),
+            leaf: BigNumber.from(depositJson.leaf)
+        }))
+    );
 
-    console.log("numLeaves", numLeaves);
+    function saveDeposits(newDeposits: Deposit[]) {
+        localStorage.setItem(DEPOSITS_LOCALHOST_KEY, JSON.stringify(
+            newDeposits.map((deposit) => ({
+                secret: deposit.secret.toString(),
+                leaf: deposit.leaf.toString()
+            }))
+        ));
+    }
 
-    const siblingsData = useContractRead({
-        addressOrName: HURRICANE_CONTRACT_ADDRESS,
-        contractInterface: HURRICANE_CONTRACT_ABI,
-        functionName: 'getPath',
-        args: [0]
-    });
+    function addDeposit(newDeposit: Deposit) {
+        const newDeposits = [...deposits, newDeposit];
+        saveDeposits(newDeposits);
+        setDeposits(newDeposits);
+    }
 
-    console.log("siblings:", siblingsData.data);
-
-    async function runProof() {
-        const {proof, publicSignals} = await groth16.fullProve({
-            secret: secret!.toString(),
-            mimcK: "0",
-            others: [],
-            dirs: []
-        }, "circuit/depositor.wasm", "circuit/depositor.zkey");
-        setProof(proof);
-        setPublicSignals(publicSignals);
+    function removeDeposit(idx: number) {
+        const newDeposits = [...deposits];
+        newDeposits.splice(idx, 1);
+        saveDeposits(newDeposits);
+        setDeposits(newDeposits);
     }
 
     return (
-        <div className={"mb-3"}>
-            <h3 className={"text-lg text-black font-bold"}>
-                DEPOSIT
-            </h3>
-            {
-                secret ? (
-                    <div>
-                        <PrimaryButton onClick={() => {
-                            setGeneratingProof(true);
-                            runProof().then(() => {
-                                setGeneratingProof(false);
-                            })
-                        }}>
-                            Deposit 1 ETH
-                        </PrimaryButton>
-                        <div>
-                            {
-                                generatingProof ? (
-                                    <span>Generating Proof ...</span>
-                                ) : (
-                                    <div>
-                                        Proof
-                                        <div
-                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
-                                            {JSON.stringify(proof, null, 2)}
-                                        </div>
-                                        Public Input
-                                        <div
-                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
-                                            {JSON.stringify(publicSignals, null, 2)}
-                                        </div>
-                                    </div>
-                                )
-                            }
-                        </div>
-                    </div>
-
-                ) : (
-                    <span>
-                        First generate a secret to being a deposit.
-                    </span>
-                )
-            }
-        </div>
-    )
-}
-
-export default function Content() {
-    // const [proofError, setProofError] = useState("");
-    // const [proof, setProof] = useState<{
-    //     pi_a: [string, string],
-    //     pi_b: [[string, string], [string, string]],
-    //     pi_c: [string, string],
-    // } | undefined>(undefined);
-    // const [
-    //     publicSignals,
-    //     setPublicSignals
-    // ] = useState<string[] | undefined>(undefined);
-
-    // const args = (proof && publicSignals) ? [
-    //     [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
-    //     [
-    //         [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
-    //         [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
-    //     ],
-    //     [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-    //     publicSignals.map((s) => BigNumber.from(s)),
-    // ] : [];
-    //
-    // async function runProof(a: number, b: number, c: number) {
-    //     console.log("starting proof");
-    //     const {proof, publicSignals} = await groth16.fullProve({
-    //         a: a,
-    //         b: b,
-    //         c: c
-    //     }, "circuit/multiply.wasm", "circuit/multiply.zkey");
-    //     setProof(proof);
-    //     setPublicSignals(publicSignals)
-    // }
-
-    // const {data, error, isError, isLoading} = useContractRead({
-    //     addressOrName: VERIFIER_CONTRACT_ADDRESS,
-    //     contractInterface: VERIFIER_CONTRACT_ABI,
-    //     functionName: 'verifyProof',
-    //     args: args,
-    // });
-
-    const [secret, setSecret] = useState<BigNumber | undefined>(undefined);
-
-    return (
         <SecretContext.Provider value={{
-            secret: secret,
-            setSecret: setSecret,
+            secret,
+            setSecret,
+            deposits: deposits,
+            addDeposit: addDeposit,
+            removeDeposit
         }}>
             <GenerateSecretSection/>
-            <DepositSection/>
+            {deposits.length > 0 && <DepositsSection/>}
+            <div className="grid grid-cols-2 gap-2">
+                <DepositSection/>
+                {deposits.length >= 1 && <WithdrawSection/>}
+            </div>
         </SecretContext.Provider>
     );
 }

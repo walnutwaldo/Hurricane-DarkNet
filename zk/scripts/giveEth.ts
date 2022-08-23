@@ -12,7 +12,7 @@ async function main() {
 
     const tx = await signer.sendTransaction({
         to: TARGET,
-        value: ethers.utils.parseEther("1")
+        value: ethers.utils.parseEther("10")
     });
     console.log("Transaction Hash:", tx.hash);
 

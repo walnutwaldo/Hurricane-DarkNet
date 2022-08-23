@@ -1,6 +1,7 @@
 {
   "name": "hardhat-project",
   "scripts": {
+    "circom:dev": "npx hardhat circom --verbose --deterministic",
     "circom:build": "npx hardhat circom --verbose",
     "circom:init": "curl https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_15.ptau -o circuits/pot15_final.ptau"
   },
@@ -9,6 +10,7 @@
     "hardhat": "^2.10.2"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.7.3",
     "dotenv": "^16.0.1",
     "hardhat-circom": "^3.3.1"
   }
