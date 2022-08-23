@@ -34,12 +34,11 @@ export function WithdrawSection() {
     ] = useState<string[] | undefined>(undefined);
 
     async function runProof() {
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(deposit!.leaf));
+        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(deposit!.secret, "0", 91)));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
 
-        console.log("leaf", deposit!.leaf);
-        console.log("mimc", mimc(deposit!.secret, "0", 91));
+		console.log(siblingsData);
 
         // console.log("siblings", siblingsData);
         // console.log("dir", dir);
