@@ -88,11 +88,12 @@ contract Hurricane is ReentrancyGuard {
         uint[2] memory a,
         uint[2][2] memory b,
         uint[2] memory c,
-        uint[3] memory input
+        uint[4] memory input
     ) public nonReentrant {
         require(withdrawVerifier.verifyProof(a, b, c, input), "withdraw proof is invalid");
         require(input[0] == merkleRoot, "merkle root does not match");
         require(input[2] == 0, "MIMC K must be zero");
+        require(uint160(input[3]) == uint160(msg.sender), "Receiver does not match");
 
         uint nullifier = input[1];
         require(!nullifiers[nullifier], "Nullifier is already used");
