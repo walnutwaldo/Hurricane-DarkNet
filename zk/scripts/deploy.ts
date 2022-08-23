@@ -1,23 +1,31 @@
-import { ethers } from "hardhat";
+import {ethers} from "hardhat";
+import {BigNumber} from "ethers";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+    const DummyHurricane = await ethers.getContractFactory("DummyHurricane");
+    const contract = await DummyHurricane.deploy();
 
-  const lockedAmount = ethers.utils.parseEther("1");
+    const contractAddress = contract.address;
+    console.log("Contract Address:", contractAddress);
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
-
-  console.log(`Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`);
+    // const a: [BigNumber, BigNumber] = [BigNumber.from(TEST_PROOF["pi_a"][0]), BigNumber.from(TEST_PROOF["pi_a"][1])];
+    // const b: [[BigNumber, BigNumber], [BigNumber, BigNumber]] = [
+    //     [BigNumber.from(TEST_PROOF["pi_b"][0][1]), BigNumber.from(TEST_PROOF["pi_b"][0][0])],
+    //     [BigNumber.from(TEST_PROOF["pi_b"][1][1]), BigNumber.from(TEST_PROOF["pi_b"][1][0])]
+    // ];
+    // const c: [BigNumber, BigNumber] = [BigNumber.from(TEST_PROOF["pi_c"][0]), BigNumber.from(TEST_PROOF["pi_c"][1])];
+    //
+    // const input: [BigNumber] = [BigNumber.from(TEST_INPUT[0])];
+    //
+    // const result = await contract.deposit(a, b, c, input, {
+    //     value: ethers.utils.parseEther("1")
+    // });
+    // console.log("Proof Verification Result:", result);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error);
+    process.exitCode = 1;
 });

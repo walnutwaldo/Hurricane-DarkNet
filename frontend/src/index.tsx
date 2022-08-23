@@ -20,7 +20,7 @@ import {alchemyProvider} from 'wagmi/providers/alchemy';
 import {publicProvider} from 'wagmi/providers/public';
 
 const {chains, provider} = configureChains(
-    [chain.mainnet, chain.goerli], //, chain.polygon, chain.optimism, chain.arbitrum],
+    [chain.mainnet, chain.goerli, chain.localhost], //, chain.polygon, chain.optimism, chain.arbitrum],
     [
         alchemyProvider({apiKey: process.env.ALCHEMY_KEY}),
         publicProvider()
@@ -44,7 +44,7 @@ root.render(
     <React.StrictMode>
         <WagmiConfig client={wagmiClient}>
             <RainbowKitProvider chains={chains} theme={lightTheme({
-                accentColor: '#55abda',
+                accentColor: '#5ad9ca',
                 accentColorForeground: 'white',
             })}>
                 <App/>

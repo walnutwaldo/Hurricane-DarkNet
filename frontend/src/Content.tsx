@@ -1,71 +1,200 @@
-import React, {useRef, useState} from 'react';
+import React, {useContext, useState} from 'react';
+import {
+    useContractRead,
+} from "wagmi";
+import {BigNumber} from "ethers";
+import SecretContext from './contexts/SecretContext';
+import {PrimaryButton, SecondaryButton} from "./components/buttons";
+import HURRICANE_CONTRACT_ABI from "./contracts/hurricane_abi.json";
 
 // @ts-ignore
-const {groth16} = snarkjs;
+const {groth16, zKey} = snarkjs;
 
-export default function Content() {
-    const [error, setError] = useState("");
-    const [proof, setProof] = useState(undefined);
-    const [publicSignals, setPublicSignals] = useState(undefined);
+const HURRICANE_CONTRACT_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
 
-    const aRef = useRef<HTMLInputElement>(null);
-    const bRef = useRef<HTMLInputElement>(null);
+const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
 
-    async function runProof(a: number, b: number) {
-        console.log("starting proof");
+function GenerateSecretSection() {
+    const {secret, setSecret} = useContext(SecretContext);
+    const [enableCopy, setEnableCopy] = useState(true);
+
+    return (<div className={"mb-3"}>
+        <h3 className={"text-lg text-black font-bold"}>
+            GENERATE A SECRET
+        </h3>
+        <div className={"flex flex-row gap-2"}>
+            <PrimaryButton onClick={() => {
+                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
+                // Concatenate into hex string
+                const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
+                const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
+                setSecret!(secret);
+            }}>
+                Generate
+            </PrimaryButton>
+            {
+                (secret !== undefined) && (
+                    <>
+                        <SecondaryButton onClick={() => {
+                            // Copy secret.toHexString() to clipboard
+                            navigator.clipboard.writeText(secret.toHexString());
+                            setEnableCopy(false);
+                            setTimeout(() => {
+                                setEnableCopy(true);
+                            }, 1000);
+                        }} disabled={!enableCopy}>
+                            {enableCopy ? "Copy" : "Copied!"}
+                        </SecondaryButton>
+                        <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                                {secret.toHexString()}
+                            </span>
+                    </>
+                )
+            }
+        </div>
+    </div>)
+}
+
+function DepositSection() {
+    const {secret, setSecret} = useContext(SecretContext);
+    const [generatingProof, setGeneratingProof] = useState(false);
+
+    const [proof, setProof] = useState<{
+        pi_a: [string, string],
+        pi_b: [[string, string], [string, string]],
+        pi_c: [string, string],
+    } | undefined>(undefined);
+    const [
+        publicSignals,
+        setPublicSignals
+    ] = useState<string[] | undefined>(undefined);
+
+    const numLeavesData = useContractRead({
+        addressOrName: HURRICANE_CONTRACT_ADDRESS,
+        contractInterface: HURRICANE_CONTRACT_ABI,
+        functionName: 'numLeaves',
+    });
+    const numLeaves = numLeavesData.data;
+
+    console.log("numLeaves", numLeaves);
+
+    const siblingsData = useContractRead({
+        addressOrName: HURRICANE_CONTRACT_ADDRESS,
+        contractInterface: HURRICANE_CONTRACT_ABI,
+        functionName: 'getPath',
+        args: [0]
+    });
+
+    console.log("siblings:", siblingsData.data);
+
+    async function runProof() {
         const {proof, publicSignals} = await groth16.fullProve({
-            a: a,
-            b: b
-        }, "circuit/multiply.wasm", "circuit/multiply.zkey");
+            secret: secret!.toString(),
+            mimcK: "0",
+            others: [],
+            dirs: []
+        }, "circuit/depositor.wasm", "circuit/depositor.zkey");
         setProof(proof);
-        setPublicSignals(publicSignals)
+        setPublicSignals(publicSignals);
     }
 
     return (
-        <div>
-            <form onSubmit={
-                async (e) => {
-                    e.preventDefault();
-                    // Get fields A and B as numbers
-                    const a = parseInt(aRef.current!.value);
-                    const b = parseInt(bRef.current!.value);
-                    if (Number.isNaN(a) || Number.isNaN(b)) {
-                        setError("Please enter valid numbers");
-                    } else {
-                        setError("");
-                    }
-                    console.log("A:", a);
-                    console.log("B:", b);
-                    return runProof(a, b);
-                }
-            }>
-                <label>A:</label>
-                <input type="text" name="a" ref={aRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                <label>B:</label>
-                <input type="text" name="b" ref={bRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                <button type="submit" className={"bg-slate-200 p-1 rounded-md"}>
-                    Generate Proof
-                </button>
-            </form>
-            <div className={"text-red-500"}>{error}</div>
-            {proof && (
-                <div>
-                    <h1>Proof</h1>
-                    <div className={"bg-slate-100 p-1 rounded-md whitespace-pre-wrap text-sm font-mono"}>
-                        {JSON.stringify(proof, null, '\t')}
+        <div className={"mb-3"}>
+            <h3 className={"text-lg text-black font-bold"}>
+                DEPOSIT
+            </h3>
+            {
+                secret ? (
+                    <div>
+                        <PrimaryButton onClick={() => {
+                            setGeneratingProof(true);
+                            runProof().then(() => {
+                                setGeneratingProof(false);
+                            })
+                        }}>
+                            Deposit 1 ETH
+                        </PrimaryButton>
+                        <div>
+                            {
+                                generatingProof ? (
+                                    <span>Generating Proof ...</span>
+                                ) : (
+                                    <div>
+                                        Proof
+                                        <div
+                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
+                                            {JSON.stringify(proof, null, 2)}
+                                        </div>
+                                        Public Input
+                                        <div
+                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 whitespace-pre-wrap"}>
+                                            {JSON.stringify(publicSignals, null, 2)}
+                                        </div>
+                                    </div>
+                                )
+                            }
+                        </div>
                     </div>
-                </div>
-            )}
-            {publicSignals && (
-                <div>
-                    <h1>Public Signals</h1>
-                    <div className={"bg-slate-100 p-1 rounded-md whitespace-pre-wrap text-sm font-mono"}>
-                        {JSON.stringify(publicSignals, null, '\t')}
-                    </div>
-                </div>
-            )}
+
+                ) : (
+                    <span>
+                        First generate a secret to being a deposit.
+                    </span>
+                )
+            }
         </div>
+    )
+}
+
+export default function Content() {
+    // const [proofError, setProofError] = useState("");
+    // const [proof, setProof] = useState<{
+    //     pi_a: [string, string],
+    //     pi_b: [[string, string], [string, string]],
+    //     pi_c: [string, string],
+    // } | undefined>(undefined);
+    // const [
+    //     publicSignals,
+    //     setPublicSignals
+    // ] = useState<string[] | undefined>(undefined);
+
+    // const args = (proof && publicSignals) ? [
+    //     [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
+    //     [
+    //         [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
+    //         [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
+    //     ],
+    //     [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
+    //     publicSignals.map((s) => BigNumber.from(s)),
+    // ] : [];
+    //
+    // async function runProof(a: number, b: number, c: number) {
+    //     console.log("starting proof");
+    //     const {proof, publicSignals} = await groth16.fullProve({
+    //         a: a,
+    //         b: b,
+    //         c: c
+    //     }, "circuit/multiply.wasm", "circuit/multiply.zkey");
+    //     setProof(proof);
+    //     setPublicSignals(publicSignals)
+    // }
+
+    // const {data, error, isError, isLoading} = useContractRead({
+    //     addressOrName: VERIFIER_CONTRACT_ADDRESS,
+    //     contractInterface: VERIFIER_CONTRACT_ABI,
+    //     functionName: 'verifyProof',
+    //     args: args,
+    // });
+
+    const [secret, setSecret] = useState<BigNumber | undefined>(undefined);
+
+    return (
+        <SecretContext.Provider value={{
+            secret: secret,
+            setSecret: setSecret,
+        }}>
+            <GenerateSecretSection/>
+            <DepositSection/>
+        </SecretContext.Provider>
     );
 }
