@@ -7,7 +7,6 @@ import "./WithdrawalVerifier.sol";
 
 
 contract DB is ERC20, Verifier {
-    address constant ETH_ADDRESS = 0x2170ed0880ac9a755fd29b2688956bd959f933f8; // might be wrong
     uint256 size = 0;
     uint256 constant HEIGHT = 4;
     bytes32[][] merkleTree;
