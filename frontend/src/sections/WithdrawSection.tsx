@@ -44,6 +44,7 @@ export function WithdrawSection() {
         // console.log("dir", dir);
         const input = {
             mimcK: "0",
+            receiver: await signer!.getAddress(),
             secret: deposit!.secret.toString(),
             others: others,
             dir: dir,
