@@ -1,6 +1,7 @@
 import React, {useContext, useState} from 'react';
 import {
-    useContractRead,
+    useContract,
+    useContractRead, useSigner,
 } from "wagmi";
 import {BigNumber} from "ethers";
 import SecretContext from './contexts/SecretContext';
@@ -10,7 +11,7 @@ import HURRICANE_CONTRACT_ABI from "./contracts/hurricane_abi.json";
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
 
-const HURRICANE_CONTRACT_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+const HURRICANE_CONTRACT_ADDRESS = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6";
 
 const MODULUS = BigNumber.from(2).pow(256).sub(BigNumber.from(2).pow(32)).sub(977);
 
@@ -76,24 +77,23 @@ function DepositSection() {
     });
     const numLeaves = numLeavesData.data;
 
-    console.log("numLeaves", numLeaves);
-
     const siblingsData = useContractRead({
         addressOrName: HURRICANE_CONTRACT_ADDRESS,
         contractInterface: HURRICANE_CONTRACT_ABI,
         functionName: 'getPath',
-        args: [0]
+        args: [numLeaves]
     });
 
-    console.log("siblings:", siblingsData.data);
-
     async function runProof() {
-        const {proof, publicSignals} = await groth16.fullProve({
+        const others = siblingsData.data!.siblings.map((sibling: BigNumber) => sibling.toString());
+        const dir = siblingsData.data!.dirs.map((dir: BigNumber) => dir.toString());
+        const input = {
             secret: secret!.toString(),
             mimcK: "0",
-            others: [],
-            dirs: []
-        }, "circuit/depositor.wasm", "circuit/depositor.zkey");
+            others: others,
+            dir: dir,
+        }
+        const {proof, publicSignals} = await groth16.fullProve(input, "circuit/depositor.wasm", "circuit/depositor.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
     }
@@ -138,7 +138,7 @@ function DepositSection() {
 
                 ) : (
                     <span>
-                        First generate a secret to being a deposit.
+                        First generate a secret before starting a deposit.
                     </span>
                 )
             }

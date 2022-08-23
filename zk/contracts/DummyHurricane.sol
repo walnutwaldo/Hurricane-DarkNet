@@ -1,7 +1,7 @@
 pragma solidity ^0.6.11;
 
-import "./depositor.groth16_verifier.sol";
-import "./verifier.groth16_verifier.sol";
+import "./VerifierVerifier.sol";
+import "./DepositorVerifier.sol";
 
 contract DummyHurricane {
 
@@ -38,10 +38,13 @@ contract DummyHurricane {
 
     function getPath(uint idx) public view returns (uint[30] memory siblings, uint[30] memory dirs) {
         for (uint i = 0; i < 30; i++) {
-            siblings[i] = 0;
+            siblings[i] = idx;
             dirs[i] = i % 2;
         }
         return (siblings, dirs);
     }
 
+    function dummyFunction(uint input) public view returns (uint output) {
+        return input;
+    }
 }
