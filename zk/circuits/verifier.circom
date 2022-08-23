@@ -11,7 +11,6 @@ template Verifier (nLayers, nRounds) {
 
     // Secret
     signal input secret; 
-    signal input address;
     signal input others[nLayers];
     signal input dir[nLayers]; // 0 for left, 1 for right
     

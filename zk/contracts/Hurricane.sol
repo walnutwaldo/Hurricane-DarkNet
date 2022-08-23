@@ -1,95 +1,87 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-interface DepositVerifierI {
-    function verifyProof(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[93] memory input
-    ) external view returns (bool r);
-}
-
-interface WithdrawVerifierI {
-    function verifyProof(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[3] memory input
-    ) external view returns (bool r);
-}
-
+import "./VerifierVerifier.sol";
+import "./DepositorVerifier.sol";
+import "./ReentrancyGuard.sol";
 
 contract Hurricane is ReentrancyGuard {
 
-    uint256 public constant HEIGHT = 30;
+    DepositVerifier public depositVerifier;
+    WithdrawVerifier public withdrawVerifier;
 
-    uint256 public numLeaves = 0;
-    bytes32 public merkleRoot;
-    bytes32[][] merkleTree;
-    mapping(bytes32 => bool) nullifiers;
+    uint public merkleRoot;
+    uint[][31] merkleTree;
 
-    DepositVerifierI public immutable depositVerifier;
-    WithdrawVerifierI public immutable withdrawVerifier;
+    mapping(uint => uint) public indexOfLeaf;
 
-    event Deposit(uint256 index);
-    event Withdraw(bytes32 nullifier);
+    mapping(uint => bool) public nullifiers;
 
-    struct Path {
-        bytes32[HEIGHT] siblings;
-        uint256[HEIGHT] dirs;
+    constructor() public {
+        depositVerifier = new DepositVerifier();
+        withdrawVerifier = new WithdrawVerifier();
     }
 
-    constructor(bytes32[HEIGHT + 1] memory hashes, address depositVerifierAddr, address withdrawVerifierAddr) public {
-        depositVerifier = DepositVerifierI(depositVerifierAddr);
-        withdrawVerifier = WithdrawVerifierI(withdrawVerifierAddr);
+    function numLeaves() public view returns (uint) {
+        return merkleTree[0].length;
+    }
 
-        // TODO: make this implicit
-        for (uint i = 0; i < HEIGHT + 1; i++) {
-            bytes32[] storage layer;
-            for (uint j = 0; j < 2 ** (HEIGHT - i); j++) {
-                layer.push(hashes[i]);
-            }
-            merkleTree.push(layer);
+    function setNode(uint layer, uint index, uint value) internal {
+        if (index >= merkleTree[layer].length) {
+            // The only way this happens is if index === merkleTree[layer].length
+            merkleTree[layer].push(value);
+        } else {
+            merkleTree[layer][index] = value;
         }
     }
 
-    function getPath(uint256 index) public view returns (Path memory path) {
-        bytes32[] storage layer;
-        uint256 curr = index;
-        for (uint i = 0; i < HEIGHT + 1; i++) {
-            layer = merkleTree[i];
-            path.siblings[i] = layer[curr];
-            path.dirs[i] = index & 1;
-            curr >>= 1;
+    function getNode(uint layer, uint index) internal view returns (uint) {
+        if (index >= merkleTree[layer].length) {
+            return 0;
+        } else {
+            return merkleTree[layer][index];
         }
-        return path;
     }
 
     function deposit(
         uint[2] memory a,
         uint[2][2] memory b,
         uint[2] memory c,
-        uint[3 * HEIGHT + 3] memory input
-    ) external payable nonReentrant {
-        require(msg.value == 1 ether, "deposit must be 1 ether");
+        uint[93] memory input
+    ) public payable nonReentrant {
+        require(msg.value == 1 ether, "Deposit must be 1 ether");
+        require(depositVerifier.verifyProof(a, b, c, input), "Deposit proof is invalid");
 
-        // TODO: verify that committed token isn't the hash of 0
+        uint newMerkleRoot = input[0];
+        uint mimcK = input[32];
+        require(mimcK == 0, "MIMC K must be zero");
 
-        require(depositVerifier.verifyProof(a, b, c, input), "Invalid Deposit Proof");
+        // newMerkleRoot === last element of Path verified by circuit already
+        // require(newMerkleRoot == input[31], "merkle root does not match last path element");
 
-        uint256 index = numLeaves++;
-        merkleRoot = bytes32(input[61]);
+        uint currLayer = 0;
+        uint currIndex = numLeaves();
+        indexOfLeaf[input[1]] = currIndex;
+        require(currIndex < 2 ** 30, "Too many leaves");
 
-        require((merkleRoot == bytes32(input[3 * HEIGHT + 2])), "Merkle Root Invalid");
-
-        for (uint i = 0; i < HEIGHT + 1; i++) {
-            merkleTree[index][i] = bytes32(input[2 * HEIGHT + 2 + i]);
-            index >>= 1;
+        for (; currLayer < 31; currLayer++) {
+            // input[1 + i] is path[i]
+            setNode(currLayer, currIndex, input[1 + currLayer]);
+            if (currLayer < 30) {
+                // input[33 + i] is others[i]
+                // input[63 + i] is dirs[i]
+                require(
+                    getNode(currLayer, currIndex ^ 1) == input[33 + currLayer],
+                    "Sibling path does not match"
+                );
+                require(
+                    input[63 + currLayer] == (currIndex & 1),
+                    "Sibling direction does not match"
+                );
+            }
+            currIndex = currIndex >> 1;
         }
 
-        emit Deposit(numLeaves);
+        merkleRoot = input[0];
     }
 
     function withdraw(
@@ -97,20 +89,25 @@ contract Hurricane is ReentrancyGuard {
         uint[2][2] memory b,
         uint[2] memory c,
         uint[3] memory input
-    ) external nonReentrant {
-        bytes32 root = bytes32(input[1]);
-        bytes32 nullifier = bytes32(input[2]);
+    ) public nonReentrant {
+        require(withdrawVerifier.verifyProof(a, b, c, input), "withdraw proof is invalid");
+        require(input[0] == merkleRoot, "merkle root does not match");
+        require(input[2] == 0, "MIMC K must be zero");
 
-        require(nullifiers[nullifier] != true, "Token Already Spent");
+        uint nullifier = input[1];
+        require(!nullifiers[nullifier], "Nullifier is already used");
         nullifiers[nullifier] = true;
-
-        require(root == merkleRoot, "Merkle Root Invalid");
-
-        require(withdrawVerifier.verifyProof(a, b, c, input), "Withdraw Proof Invalid");
 
         (bool success, bytes memory data) = msg.sender.call{value : 1 ether}("");
         require(success, "withdraw failed");
-
-        emit Withdraw(nullifier);
     }
+
+    function getPath(uint idx) public view returns (uint[30] memory siblings, uint[30] memory dirs) {
+        for (uint i = 0; i < 30; i++) {
+            siblings[i] = getNode(i, idx ^ 1);
+            dirs[i] = (idx & 1);
+            idx = idx >> 1;
+        }
+    }
+
 }

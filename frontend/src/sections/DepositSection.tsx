@@ -50,7 +50,8 @@ export function DepositSection() {
         } = await groth16.fullProve(input, "circuit/depositor.wasm", "circuit/depositor.zkey");
         setProof(proof);
         setPublicSignals(publicSignals);
-        // console.log("publicSignals", publicSignals);
+        console.log("proof", JSON.stringify(proof, null, '\t'));
+        console.log("publicSignals", JSON.stringify(publicSignals, null, '\t'));
     }
 
     const depositArgs = (proof && publicSignals) ? [
@@ -67,6 +68,7 @@ export function DepositSection() {
 
     async function makeDeposit() {
         setIsDepositing(true);
+        console.log("depositArgs", depositArgs);
         const tx = await contract.deposit(...depositArgs, {
             value: ethers.utils.parseEther('1')
         });

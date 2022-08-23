@@ -1,8 +1,8 @@
 import {ethers} from "hardhat";
 
 async function main() {
-    const DummyHurricane = await ethers.getContractFactory("DummyHurricane");
-    const contract = await DummyHurricane.deploy();
+    const Hurricane = await ethers.getContractFactory("Hurricane");
+    const contract = await Hurricane.deploy();
 
     const contractAddress = contract.address;
     console.log("Contract Address:", contractAddress);
