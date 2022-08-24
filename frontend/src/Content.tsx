@@ -14,7 +14,7 @@ function SecretDisplay(props: any) {
     const [enableSecretCopy, setEnableSecretCopy] = useState(true);
 	const [enableSharedCopy, setEnableSharedCopy] = useState(true);
     return (
-        <div className={"flex flex-row gap-5"}>
+        <div className={"flex flex-row gap-3 text-white"}>
 			<AlertButton onClick={() => {
 					// Delete secret
 					rm!(idx);
@@ -53,6 +53,32 @@ function SecretDisplay(props: any) {
     )
 }
 
+function YourAssetsSection() {
+    const {secrets, addSecret, removeSecret} = useContext(SecretContext);
+
+    return (
+        <div>
+            <h3 className={"text-lg text-black font-bold"}>
+                YOUR ASSETS
+            </h3>
+            <div className={"flex flex-col gap-2"}>
+                {
+                    secrets.map(function (secret, idx) {
+                        return (
+                            <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
+                                <div className="flex flex-row justify-between">
+                                    <span className={"text-white"}>0.1 ETH</span>
+                                    <SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret}/>
+                                </div>
+                            </div>
+                        )
+                    })
+                }
+            </div>
+        </div>
+    )
+}
+
 function GenerateSecretSection() {
     const {secrets, addSecret, removeSecret} = useContext(SecretContext);
     const [enableCopy, setEnableCopy] = useState(true);
@@ -77,26 +103,6 @@ function GenerateSecretSection() {
                 Generate 
             </PrimaryButton>
         </div>
-       	{
-			secrets.length > 0 && (
-			<>
-        	<h3 className={"text-lg text-black font-bold"}>
-            	YOUR SECRETS 
-        	</h3>
-        	<div>
-            	{
-                	secrets.map(function (secret, idx) {
-                    	return (
-                        	<div key={idx}>
-                            	<SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret}/>
-                        	</div>
-                    	)
-                	})
-            	}
-    		</div>
-			</>
-			)
-		}
     </div>)
 }
 
@@ -141,10 +147,13 @@ export default function Content() {
             addSecret: addSecret,
             removeSecret: removeSecret
         }}>
-            <GenerateSecretSection/>
-            {signer ? <div className="grid grid-cols-2 gap-2">
-                <DepositSection/>
-                <WithdrawSection/>
+            {signer ? <div className="grid grid-cols-2 gap-8">
+                <YourAssetsSection/>
+                <div>
+                    <GenerateSecretSection/>
+                    <DepositSection/>
+                    <WithdrawSection/>
+                </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
                 Connect your wallet to be able to interact with Hurricane.
             </div>}
