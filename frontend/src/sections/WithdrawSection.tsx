@@ -11,13 +11,9 @@ import InlineLoader from "../components/InlineLoader";
 const {groth16, zKey} = snarkjs;
 
 export function WithdrawSection() {
-    const {deposits, removeDeposit} = useContext(SecretContext);
-
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
-
-    const deposit = deposits.length > 0 ? deposits[0] : undefined;
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
@@ -79,6 +75,7 @@ export function WithdrawSection() {
         setIsWithdrawing(true);
 
         setIsPreparingTxn(true);
+		console.log(await contract.merkleRoot());
         const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");

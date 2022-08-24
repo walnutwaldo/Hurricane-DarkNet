@@ -1,4 +1,4 @@
-import React, {useContext, useState} from "react";
+import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
@@ -11,7 +11,6 @@ import InlineLoader from "../components/InlineLoader";
 const {groth16, zKey} = snarkjs;
 
 export function DepositSection() {
-    const {secret, setSecret, addDeposit} = useContext(SecretContext);
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
@@ -21,13 +20,16 @@ export function DepositSection() {
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
+	const shRef = useRef<HTMLInputElement>(null);
+
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
+	const [depositErrMsg, setDepositErrMsg] = useState("");
 
-    async function makeDeposit() {
+    async function makeDeposit(currentShared: BigNumber ) {
         setIsDepositing(true);
         setIsPreparingTxn(true);
-        const leaf = mimc(secret, "0");
+        const leaf = currentShared;
         const tx = await contract.deposit(leaf, {
             value: ethers.utils.parseEther('0.1')
         }).catch((err: any) => {
@@ -39,13 +41,6 @@ export function DepositSection() {
 
         const result = await tx.wait();
         setIsDepositing(false);
-        if (result.status) {
-            addDeposit?.({
-                secret: secret!,
-                leaf: leaf
-            });
-            setSecret?.(undefined);
-        }
     }
 
     return (
@@ -53,30 +48,32 @@ export function DepositSection() {
             <h3 className={"text-lg text-black font-bold"}>
                 DEPOSIT
             </h3>
-            {
-                secret ? (
-                        <div>
-                            <div className="flex flex-row gap-2">
-                                <PrimaryButton onClick={() => {
-                                    makeDeposit();
-                                }} disabled={isDepositing}>
-                                    {
-                                        isDepositing ? <span>Depositing <InlineLoader/></span> : "Deposit 0.1 ETH"
-                                    }
-                                </PrimaryButton>
-                            </div>
-                            {isPreparingTxn && (
-                                <div>
-                                    Preparing transaction <InlineLoader/>
-                                </div>
-                            )}
-                        </div>
-                ) : (
-                <span>
-                First generate a secret before starting a deposit.
-                </span>
-                )
-            }
-        </div>
+        	<div>
+                <label>Shared key:</label>
+                <input type="text" name="sharedTextbox" ref={shRef}
+                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                <div className="flex flex-row gap-2">
+                    <PrimaryButton type="submit" onClick={() => {
+                        setDepositErrMsg("");
+                        let currentShared = BigNumber.from("0");
+                        try {
+                            currentShared = BigNumber.from(shRef.current!.value);
+                        } catch (err) {
+                            setDepositErrMsg("Use an actual number for the secret!");
+                            return;
+                        }
+                        if (currentShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                            setDepositErrMsg("Secret out of bounds");
+                            return;
+                        }
+                        makeDeposit(currentShared).then(() => {
+                        })
+                    }} disabled={isDepositing}>
+                    	Deposit 0.1 ETH
+					</PrimaryButton>
+				</div>
+				<div className={"text-red-500"}>{depositErrMsg}</div>
+			</div>
+		</div>
     )
 }
