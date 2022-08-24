@@ -2,8 +2,11 @@ import './styles/App.css';
 import Content from "./Content";
 import React from 'react';
 import {ConnectButton} from '@rainbow-me/rainbowkit';
+import {useSigner} from "wagmi";
 
 function App() {
+    const {data: signer} = useSigner();
+
     return (
         <div className={"bg-stone-200 pt-4 flex flex-col h-full"}>
             <div className={"bg-stone-800 container mx-auto p-4 rounded-2xl"}>
@@ -23,9 +26,9 @@ function App() {
                             </div>
                         </div>
                     </div>
-                    <div className={"mt-auto"}>
+                    {signer && <div className={"mt-auto"}>
                         <ConnectButton/>
-                    </div>
+                    </div>}
                 </div>
             </div>
             <div className={"container mx-auto py-4 flex-1"}>
