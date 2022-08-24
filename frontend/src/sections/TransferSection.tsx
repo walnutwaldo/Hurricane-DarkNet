@@ -32,11 +32,13 @@ export function TransferSection() {
         publicSignals,
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
+    const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
     async function runProof(currentSecret: BigNumber, receiverShared: BigNumber) {
         const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0", 91)));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
+        const rootIdx = siblingsData.rootIdx;
 
         console.log(siblingsData);
 
@@ -54,6 +56,7 @@ export function TransferSection() {
             publicSignals
         } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
         setProof(proof);
+        setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
         console.log("publicSignals", publicSignals);
     }
@@ -75,9 +78,9 @@ export function TransferSection() {
     async function makeTransfer(receiverShared: BigNumber) {
         setIsTransferring(true);
         setIsPreparingTxn(true);
-		console.log("merkleRoot", await contract.merkleRoot());
         const tx = await contract.transfer(
             ...transferProofArgs,
+            rootIdx,
             receiverShared
         ).catch((err: any) => {
             console.log(err);

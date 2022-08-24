@@ -15,9 +15,6 @@ async function main() {
     const leaf = BigNumber.from(LEAF);
     const index = await hurricaneContract.indexOfLeaf(leaf);
     console.log(`index: ${index}`);
-
-    const root = await hurricaneContract.merkleRoot();
-    console.log(`root: ${root}`);
 }
 
 main().catch((error) => {
