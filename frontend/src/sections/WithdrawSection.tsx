@@ -31,9 +31,8 @@ export function WithdrawSection() {
         publicSignals,
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
-
+	
     async function runProof(currentSecret: BigNumber) {
-		console.log(contract.indexOfLeaf(mimc(currentSecret, "0")));
         const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0")));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
@@ -76,7 +75,7 @@ export function WithdrawSection() {
         setIsWithdrawing(true);
 
         setIsPreparingTxn(true);
-        console.log(await contract.merkleRoot());
+        console.log("merkle root:", await contract.merkleRoot());
         const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
