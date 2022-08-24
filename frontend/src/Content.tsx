@@ -39,9 +39,13 @@ function SecretDisplay(props: any) {
             }} disabled={!enableSecretCopy}>
                 {enableSecretCopy || !isAsset ? "Copy" : "Copied!"}
             </SecondaryButton>
-            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                {secret.secret.toHexString().substr(0,6) + "..."}
-            </span>
+            {	
+				isAsset ? 	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                	{secret.secret.toHexString().substr(0,6) + "..."}
+            	</span> : <   span className={"px-1 bg-zinc-400 text-zinc-900 rounded-md font-mono"}>
+                	{secret.secret.toHexString().substr(0,6) + "..."}
+				</span>
+			}
             {
 				isAsset ? <></> : <>
 				<label><b>Shared key:</b></label>
