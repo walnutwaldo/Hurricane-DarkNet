@@ -10,7 +10,7 @@ import InlineLoader from "../components/InlineLoader";
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
 
-export function WithdrawSection() {
+export function TransferSection() {
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
@@ -21,6 +21,7 @@ export function WithdrawSection() {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const sRef = useRef<HTMLInputElement>(null);
+    const shRef = useRef<HTMLInputElement>(null);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -32,9 +33,8 @@ export function WithdrawSection() {
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
 
-    async function runProof(currentSecret: BigNumber) {
-		console.log(contract.indexOfLeaf(mimc(currentSecret, "0")));
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0")));
+    async function runProof(currentSecret: BigNumber, receiverShared: BigNumber) {
+        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0", 91)));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
 
@@ -44,7 +44,7 @@ export function WithdrawSection() {
         // console.log("dir", dir);
         const input = {
             mimcK: "0",
-            receiver: await signer!.getAddress(),
+            receiver: receiverShared.toString(),
             secret: currentSecret.toString(),
             others: others,
             dir: dir,
@@ -58,7 +58,7 @@ export function WithdrawSection() {
         console.log("publicSignals", publicSignals);
     }
 
-    const withdrawArgs = (proof && publicSignals) ? [
+    const transferProofArgs = (proof && publicSignals) ? [
         [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
         [
             [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
@@ -68,52 +68,72 @@ export function WithdrawSection() {
         publicSignals.map((s) => BigNumber.from(s)),
     ] : [];
 
-    const [isWithdrawing, setIsWithdrawing] = useState(false);
-    const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
+    const [isTransferring, setIsTransferring] = useState(false);
+    const [transferErrMsg, setTransferErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
-    async function makeWithdrawal() {
-        setIsWithdrawing(true);
-
+    async function makeTransfer(receiverShared: BigNumber) {
+        setIsTransferring(true);
         setIsPreparingTxn(true);
-        console.log(await contract.merkleRoot());
-        const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
+		console.log("merkleRoot", await contract.merkleRoot());
+        const tx = await contract.transfer(
+            ...transferProofArgs,
+            receiverShared
+        ).catch((err: any) => {
             console.log(err);
-            setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
-            setIsWithdrawing(false);
+            setTransferErrMsg("Transfer failed (possibly secret already taken)");
+            setIsTransferring(false);
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
         const result = await tx.wait();
-        setIsWithdrawing(false);
+        setIsTransferring(false);
         setProof(undefined);
     }
 
     return (
         <div className={"mb-3"}>
             <h3 className={"text-lg text-black font-bold"}>
-                WITHDRAW
+                TRANSFER
             </h3>
             <div>
-                <label>Secret:</label>
+                <label>Your secret:</label>
                 <input type="text" name="secretTextbox" ref={sRef}
                        className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+
+                <label>Receiver's shared key:</label>
+                <input type="text" name="sharedTextbox" ref={shRef}
+                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                
+                <div className={"text-red-500"}>{transferErrMsg}</div>
+
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        setWithdrawErrMsg("");
+                        setTransferErrMsg("");
                         let currentSecret = BigNumber.from("0");
                         try {
                             currentSecret = BigNumber.from(sRef.current!.value);
                         } catch (err) {
-                            setWithdrawErrMsg("Use an actual number for the secret!");
+                            setTransferErrMsg("Use an actual number for the secret!");
                             return;
                         }
                         if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setWithdrawErrMsg("Secret out of bounds");
+                            setTransferErrMsg("Secret out of bounds");
                             return;
                         }
                         setGeneratingProof(true);
-                        runProof(currentSecret).then(() => {
+                        let receiverShared = BigNumber.from("0");
+                        try {
+                            receiverShared = BigNumber.from(shRef.current!.value);
+                        } catch (err) {
+                            setTransferErrMsg("Use an actual number for the secret!");
+                            return;
+                        }
+                        if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                            setTransferErrMsg("Secret out of bounds");
+                            return;
+                        }
+                        runProof(currentSecret, receiverShared).then(() => {
                             setGeneratingProof(false);
                         })
                     }} disabled={generatingProof}>
@@ -122,29 +142,38 @@ export function WithdrawSection() {
                     {proof &&
                         (<>
                                 <PrimaryButton onClick={() => {
-                                    makeWithdrawal();
-                                }} disabled={isWithdrawing}>
+                                    let receiverShared = BigNumber.from("0");
+                                    try {
+                                        receiverShared = BigNumber.from(shRef.current!.value);
+                                    } catch (err) {
+                                        setTransferErrMsg("Use an actual number for the secret!");
+                                        return;
+                                    }
+                                    if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                                        setTransferErrMsg("Secret out of bounds");
+                                        return;
+                                    }
+                                    makeTransfer(receiverShared).then();
+                                }} disabled={isTransferring}>
                                     {
-                                        isWithdrawing ?
-                                            <span>Withdrawing <InlineLoader/></span> : "Withdraw 0.1 ETH"
+                                        isTransferring ?
+                                            <span>Transferring <InlineLoader/></span> : "Transfer 0.1 ETH"
                                     }
                                 </PrimaryButton>
-                                {isWithdrawing && (
-                                    isPreparingTxn ? (
-                                        <span>
-                                            Preparing transaction <InlineLoader/>
-                                        </span>
-                                    ) : (
-                                        <span>
-                                            Withdrawing <InlineLoader/>
-                                        </span>
-                                    )
-                                )}
+                                {isTransferring && (isPreparingTxn ? (
+                                    <span>
+                                        Preparing transaction <InlineLoader/>
+                                    </span>
+                                ) : (
+                                    <span>
+                                        Transferring <InlineLoader/>
+                                    </span>
+                                ))}
                             </>
                         )
                     }
                 </div>
-                <div className={"text-red-500"}>{withdrawErrMsg}</div>
+                
                 <div>
                     {
                         generatingProof ? (

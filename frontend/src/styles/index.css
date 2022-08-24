@@ -11,7 +11,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body, #root, #root, #root>div {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.courier-new {
+    font-family: courier-new, courier, monospace;
 }
