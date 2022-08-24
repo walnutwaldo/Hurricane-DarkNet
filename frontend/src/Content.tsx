@@ -6,6 +6,7 @@ import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
 import {useSigner} from "wagmi";
 import mimc from "./crypto/mimc";
+import {TransferSection} from "./sections/TransferSection";
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -59,7 +60,7 @@ function YourAssetsSection() {
     return (
         <div>
             <h3 className={"text-lg text-black font-bold"}>
-                YOUR ASSETS
+                YOUR KEYS
             </h3>
             <div className={"flex flex-col gap-2"}>
                 {
@@ -67,7 +68,7 @@ function YourAssetsSection() {
                         return (
                             <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
                                 <div className="flex flex-row justify-between">
-                                    <span className={"text-white"}>0.1 ETH</span>
+                                    {/*<span className={"text-white"}></span>*/}
                                     <SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret}/>
                                 </div>
                             </div>
@@ -153,6 +154,7 @@ export default function Content() {
                     <GenerateSecretSection/>
                     <DepositSection/>
                     <WithdrawSection/>
+                    <TransferSection/>
                 </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
                 Connect your wallet to be able to interact with Hurricane.
