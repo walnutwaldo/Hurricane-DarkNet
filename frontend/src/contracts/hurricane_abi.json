@@ -24,6 +24,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "ROOT_WINDOW",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -55,6 +68,11 @@
         "internalType": "uint256[30]",
         "name": "dirs",
         "type": "uint256[30]"
+      },
+      {
+        "internalType": "uint8",
+        "name": "rootIdx",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -93,8 +111,14 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "merkleRoot",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "merkleRoots",
     "outputs": [
       {
         "internalType": "uint256",
@@ -138,6 +162,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "rootIndex",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256[2]",
@@ -158,6 +195,11 @@
         "internalType": "uint256[4]",
         "name": "senderInput",
         "type": "uint256[4]"
+      },
+      {
+        "internalType": "uint8",
+        "name": "rootIdx",
+        "type": "uint8"
       },
       {
         "internalType": "uint256",
@@ -225,6 +267,11 @@
         "internalType": "uint256[4]",
         "name": "input",
         "type": "uint256[4]"
+      },
+      {
+        "internalType": "uint8",
+        "name": "rootIdx",
+        "type": "uint8"
       }
     ],
     "name": "withdraw",
