@@ -35,7 +35,7 @@ function App() {
                 <Content/>
             </div>
             <div className={"bg-darkgreen text-white courier-new"}>
-                <div className="container mx-auto py-2">
+                <div className="container mx-auto pt-2 pb-4">
                     <div className="flex flex-row justify-between">
                         <h1 className="text-md">
                             Built at <b>Hacklodge 2022</b><br/>
