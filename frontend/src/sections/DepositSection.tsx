@@ -66,11 +66,19 @@ export function DepositSection() {
                             setDepositErrMsg("Secret out of bounds");
                             return;
                         }
-                        makeDeposit(currentShared).then(() => {
-                        })
+                        makeDeposit(currentShared).then();
                     }} disabled={isDepositing}>
                     	Deposit 0.1 ETH
 					</PrimaryButton>
+                    {isDepositing && (isPreparingTxn ? (
+                        <span>
+                                        Preparing transaction <InlineLoader/>
+                                    </span>
+                    ) : (
+                        <span>
+                                        Depositing <InlineLoader/>
+                                    </span>
+                    ))}
 				</div>
 				<div className={"text-red-500"}>{depositErrMsg}</div>
 			</div>

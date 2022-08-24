@@ -7,6 +7,7 @@ import {WithdrawSection} from "./sections/WithdrawSection";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "./contracts/deployInfo";
 import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
+import {TransferSection} from "./sections/TransferSection";
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -18,7 +19,7 @@ function SecretDisplay(props: any) {
 	const [enableSharedCopy, setEnableSharedCopy] = useState(true);
     const [enableIsPaidCopy, setEnableIsPaidCopy] = useState(true);
     return (
-        <div className={"flex flex-row gap-5"}>
+        <div className={"flex flex-row gap-3 text-white"}>
 			<AlertButton onClick={() => {
 					// Delete secret
 					rm!(idx);
@@ -54,19 +55,35 @@ function SecretDisplay(props: any) {
                 {secret.toHexString().substr(0,10) + "..."}
             </span>
             <label><b>Used?:</b></label>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(isPaid!.toHexString());
-                setEnableSecretCopy(false);
-                setTimeout(() => {
-                    setEnableSecretCopy(true);
-                }, 1000);
-            }} disabled={!enableSecretCopy}>
-                {enableSecretCopy ? "Copy" : "Copied!"}
-            </SecondaryButton>
             <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                {isPaid}
+                {isPaid ? "YES" : "NO"}
             </span>
+        </div>
+    )
+}
+
+function YourAssetsSection() {
+    const {secrets, addSecret, removeSecret} = useContext(SecretContext);
+
+    return (
+        <div>
+            <h3 className={"text-lg text-black font-bold"}>
+                YOUR KEYS
+            </h3>
+            <div className={"flex flex-col gap-2"}>
+                {
+                    secrets.map(function (secret, idx) {
+                        return (
+                            <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
+                                <div className="flex flex-row justify-between">
+                                    {/*<span className={"text-white"}></span>*/}
+                                    <SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret} isPaid = {secret.isPaid}/>
+                                </div>
+                            </div>
+                        )
+                    })
+                }
+            </div>
         </div>
     )
 }
@@ -93,7 +110,7 @@ function GenerateSecretSection() {
                 const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
                 const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
 				const leaf = mimc(secret, "0");
-                const isPaid = (await contract.indexOfLeaf(mimc(secret, "0", 91))).eq(0);
+                const isPaid = true// (await contract.indexOfLeaf(mimc(secret, "0", 91))).eq(0);
                 addSecret!({
 					secret: secret,
 					shared: leaf,
@@ -103,26 +120,6 @@ function GenerateSecretSection() {
                 Generate 
             </PrimaryButton>
         </div>
-       	{
-			secrets.length > 0 && (
-			<>
-        	<h3 className={"text-lg text-black font-bold"}>
-            	YOUR SECRETS 
-        	</h3>
-        	<div>
-            	{
-                	secrets.map(function (secret, idx) {
-                    	return (
-                        	<div key={idx}>
-                            	<SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret} isPaid = {secret.isPaid}/>
-                        	</div>
-                    	)
-                	})
-            	}
-    		</div>
-			</>
-			)
-		}
     </div>)
 }
 
@@ -136,7 +133,7 @@ export default function Content() {
         JSON.parse(localStorage.getItem(SECRETS_LOCALHOST_KEY) || '[]').map((secretJson: any) => ({
             secret: BigNumber.from(secretJson.secret),
             shared: BigNumber.from(secretJson.shared),
-            isPaid: Boolean(secretJson.isPaid)
+            isPaid: secretJson.isPaid
         }))
     );
 
@@ -145,7 +142,7 @@ export default function Content() {
             newSecrets.map((secret) => ({
                 secret: secret.secret.toString(),
                 shared: secret.shared.toString(),
-                isPaid: secret.isPaid.toString()
+                isPaid: secret.isPaid
             }))
         ));
     }
@@ -169,10 +166,14 @@ export default function Content() {
             addSecret: addSecret,
             removeSecret: removeSecret,
         }}>
-            <GenerateSecretSection/>
-            {signer ? <div className="grid grid-cols-2 gap-2">
-                <DepositSection/>
-                <WithdrawSection/>
+            {signer ? <div className="grid grid-cols-2 gap-8">
+                <YourAssetsSection/>
+                <div>
+                    <GenerateSecretSection/>
+                    <DepositSection/>
+                    <WithdrawSection/>
+                    <TransferSection/>
+                </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
                 Connect your wallet to be able to interact with Hurricane.
             </div>}
