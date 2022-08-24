@@ -3,7 +3,8 @@ import React from "react";
 
 export type Secret = {
     secret: BigNumber,
-    shared: BigNumber
+    shared: BigNumber,
+    isPaid: boolean
 }
 
 type SecretContext = {
