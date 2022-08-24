@@ -31,10 +31,11 @@ export function WithdrawSection() {
         publicSignals,
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
+    
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
     async function runProof(currentSecret: BigNumber) {
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0", 91)));
+        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0")));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;

@@ -4,17 +4,21 @@ import React from "react";
 export type Secret = {
     secret: BigNumber,
     shared: BigNumber,
-    isPaid: boolean
 }
 
 type SecretContext = {
-    secrets: Secret[],
-    addSecret?: (newSecret: Secret) => void,
-    removeSecret?: (idx: number) => void,
+    keys: Secret[],
+	assets: Secret[],
+    addKey?: (newSecret: Secret) => void,
+    addAsset?: (newSecret: Secret) => void,
+    removeKey?: (idx: number) => void,
+    removeAsset?: (idx: number) => void,
+	updateStatus?: (idx: number) => void,
 }
 
 const DEFAULT_CONTEXT = {
-    secrets: [],
+	keys: [],
+	assets: [],
 }
 
 const SecretContext = React.createContext<SecretContext>(DEFAULT_CONTEXT);
