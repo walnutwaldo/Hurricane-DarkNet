@@ -9,6 +9,7 @@ import InlineLoader from "../components/InlineLoader";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 export function DepositSection() {
     const {chain, chains} = useNetwork()
@@ -25,6 +26,8 @@ export function DepositSection() {
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 	const [depositErrMsg, setDepositErrMsg] = useState("");
+
+	const {addAsset} = useContext(SecretContext);
 
     async function makeDeposit(currentShared: BigNumber ) {
         setIsDepositing(true);
@@ -49,24 +52,22 @@ export function DepositSection() {
                 DEPOSIT
             </h3>
         	<div>
-                <label>Shared key:</label>
-                <input type="text" name="sharedTextbox" ref={shRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
                 <div className="flex flex-row gap-2">
-                    <PrimaryButton type="submit" onClick={() => {
-                        setDepositErrMsg("");
-                        let currentShared = BigNumber.from("0");
-                        try {
-                            currentShared = BigNumber.from(shRef.current!.value);
-                        } catch (err) {
-                            setDepositErrMsg("Use an actual number for the secret!");
-                            return;
-                        }
-                        if (currentShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setDepositErrMsg("Secret out of bounds");
-                            return;
-                        }
-                        makeDeposit(currentShared).then();
+                    <PrimaryButton onClick={async () => {
+						// first, generate
+						console.log("Generating");
+		                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
+    		            // Concatenate into hex string
+        		        const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
+            		    const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
+                		const leaf = mimc(secret, "0");
+                		console.log(leaf, await contract.indexOfLeaf(leaf));
+                        await makeDeposit(leaf);
+                		const isPaid = await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero()); // should be true
+		                addAsset!({
+    		                secret: secret,
+        		            shared: leaf,
+                		});
                     }} disabled={isDepositing}>
                     	Deposit 0.1 ETH
 					</PrimaryButton>
