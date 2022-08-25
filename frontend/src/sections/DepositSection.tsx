@@ -38,7 +38,7 @@ export function DepositSection() {
 
     useEffect(() => {
         nft.getApproved(NFT_ID_HARDCODED).then((approved: any) => {
-            console.log("approved:", approved);
+            console.log("approved address:", approved);
             setIsApproved(approved === contractAddress);
         });
     }, [])
@@ -81,8 +81,13 @@ export function DepositSection() {
             setIsDepositing(false);
             setIsPreparingTxn(false);
         });
+        console.log("deposit tx:", tx);
         setIsPreparingTxn(false);
         const result = await tx.wait();
+        if (!result.status) {
+            setDepositErrMsg("Deposit failed");
+        }
+        console.log("deposit result:", result);
         setIsDepositing(false);
     }
 

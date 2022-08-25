@@ -65,6 +65,10 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
         }
     }
 
+    function getLeaf(uint idx) public view returns (uint) {
+        return merkleTree[0][idx];
+    }
+
     function hashLeftRight(
         IHasher _hasher,
         uint _left,
@@ -111,14 +115,13 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
         merkleRoots[++rootIndex] = getNode(30, 0);
     }
 
-    function deposit(
+    function calcLeaf(
         uint publicKey,
         IERC721 token,
         uint256 tokenId,
-        MaskedData memory data,
-        uint noise // Can be public here because the NFT data is know anyway
-    ) public nonReentrant {
-        uint leaf = hashLeftRight(
+        uint noise
+    ) public view returns (uint leaf) {
+        leaf = hashLeftRight(
             hasher,
             publicKey,
             hashLeftRight(
@@ -131,6 +134,16 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
                 noise
             )
         );
+    }
+
+    function deposit(
+        uint publicKey,
+        IERC721 token,
+        uint256 tokenId,
+        MaskedData memory data,
+        uint noise // Can be public here because the NFT data is know anyway
+    ) public nonReentrant {
+        uint leaf = calcLeaf(publicKey, token, tokenId, noise);
         depositUpdate(publicKey, data, leaf);
         token.safeTransferFrom(msg.sender, address(this), tokenId);
     }
@@ -214,10 +227,10 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
     //                          BACKDOOR
     // --------------------------------------------------------------
 
-//    function rescueFunds() public onlyOwner {
-//        (bool success, bytes memory data) = msg.sender.call{value : address(this).balance}("");
-//        require(success, "Rescue failed");
-//    }
+    //    function rescueFunds() public onlyOwner {
+    //        (bool success, bytes memory data) = msg.sender.call{value : address(this).balance}("");
+    //        require(success, "Rescue failed");
+    //    }
 
     function rescueNft(
         IERC721 token,

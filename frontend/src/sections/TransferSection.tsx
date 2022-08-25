@@ -1,11 +1,17 @@
-import React, {useContext, useRef, useState} from "react";
-import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useNetwork, useSigner} from "wagmi";
-import {BigNumber, Contract, ethers} from "ethers";
+import React, {useRef, useState} from "react";
+import {maskTokenData, privateKeyToSecret, sharedKeyToSecret} from "../contexts/SecretContext";
+import {useNetwork, useSigner} from "wagmi";
+import {BigNumber, Contract} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES,
+    NFT_ADDRESS_HARDCODED,
+    NFT_ID_HARDCODED
+} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
+import {useNftFromSecret} from "../utils/useNftFromSecret";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -23,6 +29,33 @@ export function TransferSection() {
     const sRef = useRef<HTMLInputElement>(null);
     const shRef = useRef<HTMLInputElement>(null);
 
+    const [currentSecret, setCurrentSecret] = useState<any>(undefined);
+    const [receiverShared, setReceiverShared] = useState<any>(undefined);
+
+    function updateSecret() {
+        try {
+            setCurrentSecret(
+                sRef.current ? (
+                    privateKeyToSecret(sRef.current!.value) || undefined
+                ) : undefined
+            );
+        } catch {
+            setCurrentSecret(undefined);
+        }
+    }
+
+    function updateShared() {
+        try {
+            setReceiverShared(
+                shRef.current ? (sharedKeyToSecret(shRef.current.value) || undefined) : undefined
+            )
+        } catch {
+            setReceiverShared(undefined);
+        }
+    }
+
+    const [nftContract, nftInfo] = useNftFromSecret(currentSecret);
+
     const [proof, setProof] = useState<{
         pi_a: [string, string],
         pi_b: [[string, string], [string, string]],
@@ -34,20 +67,32 @@ export function TransferSection() {
     ] = useState<string[] | undefined>(undefined);
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
-    async function runProof(currentSecret: BigNumber, receiverShared: BigNumber) {
-        const siblingsData = await contract.getPath(await contract.leafForPubkey(mimc(currentSecret, "0", 91)));
+    async function runProof(
+        secret: {
+            secret: BigNumber,
+            noise: BigNumber
+        },
+        shared: {
+            shared: BigNumber,
+            noise: BigNumber
+            tokenMask: BigNumber,
+            tokenIdMask: BigNumber
+        }
+    ) {
+        const leafIdx = await contract.leafForPubkey(mimc(secret.secret, "0", 91));
+        const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
 
-        console.log(siblingsData);
-
-        // console.log("siblings", siblingsData);
-        // console.log("dir", dir);
         const input = {
             mimcK: "0",
-            receiver: receiverShared.toString(),
-            secret: currentSecret.toString(),
+            newPubKey: shared.shared.toString(),
+            tokenAddress: NFT_ADDRESS_HARDCODED,
+            tokenId: NFT_ID_HARDCODED,
+            secret: secret.secret.toString(),
+            secretNoise: secret.noise.toString(),
+            newSecretNoise: shared.noise.toString(),
             others: others,
             dir: dir,
         }
@@ -55,6 +100,7 @@ export function TransferSection() {
             proof,
             publicSignals
         } = await groth16.fullProve(input, "circuit/transfer.wasm", "circuit/transfer.zkey");
+
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
@@ -75,13 +121,24 @@ export function TransferSection() {
     const [transferErrMsg, setTransferErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
-    async function makeTransfer(receiverShared: BigNumber) {
+    async function makeTransfer(
+        shared: {
+            shared: BigNumber,
+            noise: BigNumber
+            tokenMask: BigNumber,
+            tokenIdMask: BigNumber
+        }
+    ) {
         setIsTransferring(true);
         setIsPreparingTxn(true);
         const tx = await contract.transfer(
             ...transferProofArgs,
             rootIdx,
-            receiverShared
+            maskTokenData(
+                NFT_ADDRESS_HARDCODED,
+                NFT_ID_HARDCODED,
+                shared
+            )
         ).catch((err: any) => {
             console.log(err);
             setTransferErrMsg("Transfer failed (possibly secret already taken)");
@@ -90,6 +147,9 @@ export function TransferSection() {
         });
         setIsPreparingTxn(false);
         const result = await tx.wait();
+        if (!result.status) {
+            setTransferErrMsg("Transfer failed (possibly secret already taken)");
+        }
         setIsTransferring(false);
         setProof(undefined);
     }
@@ -101,66 +161,53 @@ export function TransferSection() {
             </h3>
             <div>
                 <label>Your secret:</label>
-                <input type="text" name="secretTextbox" ref={sRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                <input
+                    type="text"
+                    name="secretTextbox"
+                    ref={sRef}
+                    className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}
+                    onChange={updateSecret}
+                /><br/>
 
                 <label>Receiver's shared key:</label>
-                <input type="text" name="sharedTextbox" ref={shRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                
+                <input
+                    type="text"
+                    name="sharedTextbox"
+                    ref={shRef}
+                    className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}
+                    onChange={updateShared}
+                /><br/>
+
                 <div className={"text-red-500"}>{transferErrMsg}</div>
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        setTransferErrMsg("");
-                        let currentSecret = BigNumber.from("0");
-                        try {
-                            currentSecret = BigNumber.from(sRef.current!.value);
-                        } catch (err) {
-                            setTransferErrMsg("Use an actual number for the secret!");
-                            return;
+                        if (!receiverShared) {
+                            setTransferErrMsg("Please enter a secret");
+                        } else if (!receiverShared) {
+                            setTransferErrMsg("Please enter a shared key");
+                        } else {
+                            setTransferErrMsg("");
+                            setGeneratingProof(true);
+                            runProof(currentSecret, receiverShared).then(() => {
+                                setGeneratingProof(false);
+                            })
                         }
-                        if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setTransferErrMsg("Secret out of bounds");
-                            return;
-                        }
-                        setGeneratingProof(true);
-                        let receiverShared = BigNumber.from("0");
-                        try {
-                            receiverShared = BigNumber.from(shRef.current!.value);
-                        } catch (err) {
-                            setTransferErrMsg("Use an actual number for the secret!");
-                            return;
-                        }
-                        if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setTransferErrMsg("Secret out of bounds");
-                            return;
-                        }
-                        runProof(currentSecret, receiverShared).then(() => {
-                            setGeneratingProof(false);
-                        })
                     }} disabled={generatingProof}>
                         Generate Proof
                     </PrimaryButton>
                     {proof &&
                         (<>
                                 <PrimaryButton onClick={() => {
-                                    let receiverShared = BigNumber.from("0");
-                                    try {
-                                        receiverShared = BigNumber.from(shRef.current!.value);
-                                    } catch (err) {
-                                        setTransferErrMsg("Use an actual number for the secret!");
-                                        return;
+                                    if (!receiverShared) {
+                                        setTransferErrMsg("Please enter a shared key");
+                                    } else {
+                                        makeTransfer(receiverShared).then();
                                     }
-                                    if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                                        setTransferErrMsg("Secret out of bounds");
-                                        return;
-                                    }
-                                    makeTransfer(receiverShared).then();
                                 }} disabled={isTransferring}>
                                     {
                                         isTransferring ?
-                                            <span>Transferring <InlineLoader/></span> : "Transfer 0.1 ETH"
+                                            <span>Transferring <InlineLoader/></span> : `Transfer ${nftInfo.name || "unknown"}`
                                     }
                                 </PrimaryButton>
                                 {isTransferring && (isPreparingTxn ? (
@@ -176,7 +223,7 @@ export function TransferSection() {
                         )
                     }
                 </div>
-                
+
                 <div>
                     {
                         generatingProof ? (

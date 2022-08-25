@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useRef, useState} from "react";
-import SecretContext, {privateKeyToSecret, Secret} from "../contexts/SecretContext";
+import SecretContext, {privateKeyToSecret, Secret, unmaskTokenData} from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
@@ -11,6 +11,7 @@ import {
 } from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
+import {useNftFromSecret} from "../utils/useNftFromSecret";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -26,17 +27,21 @@ export function WithdrawSection() {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const sRef = useRef<HTMLInputElement>(null);
+    const [currentSecret, setCurrentSecret] = useState<any>(undefined);
 
-    const nft = new Contract(NFT_ADDRESS_HARDCODED, NFT_ABI, signer!);
-    const [nftInfo, setNftInfo] = useState<any>(undefined);
+    function updateSecret() {
+        try {
+            setCurrentSecret(
+                sRef.current ? (
+                    privateKeyToSecret(sRef.current!.value) || undefined
+                ) : undefined
+            );
+        } catch {
+            setCurrentSecret(undefined);
+        }
+    }
 
-    useEffect(() => {
-        nft.tokenURI(NFT_ID_HARDCODED).then((tokenURI: any) => {
-            fetch(tokenURI).then(res=>res.json()).then((res: any) => {
-                setNftInfo(res);
-            });
-        });
-    }, [])
+    const [nftContract, nftInfo] = useNftFromSecret(currentSecret);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -62,8 +67,6 @@ export function WithdrawSection() {
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
 
-        // console.log("siblings", siblingsData);
-        // console.log("dir", dir);
         const input = {
             mimcK: "0",
             tokenAddress: NFT_ADDRESS_HARDCODED,
@@ -135,16 +138,24 @@ export function WithdrawSection() {
             </h3>
             <div>
                 <label>Secret:</label>
-                <input type="text" name="secretTextbox" ref={sRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                <input
+                    type="text"
+                    name="secretTextbox"
+                    ref={sRef}
+                    className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}
+                    onChange={updateSecret}
+                /><br/>
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        setWithdrawErrMsg("");
-                        let currentSecret = privateKeyToSecret(sRef.current!.value);
-                        setGeneratingProof(true);
-                        runProof(currentSecret).then(() => {
-                            setGeneratingProof(false);
-                        })
+                        if (!currentSecret) {
+                            setWithdrawErrMsg("Please enter a secret");
+                        } else {
+                            setWithdrawErrMsg("");
+                            setGeneratingProof(true);
+                            runProof(currentSecret).then(() => {
+                                setGeneratingProof(false);
+                            })
+                        }
                     }} disabled={generatingProof}>
                         Generate Proof
                     </PrimaryButton>

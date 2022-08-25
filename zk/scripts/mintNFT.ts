@@ -1,7 +1,7 @@
 import {ethers} from "hardhat";
 import {BigNumber} from "ethers";
 
-const NFT_ADDRESS = "0x525C7063E7C20997BaaE9bDa922159152D0e8417";
+const NFT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
 const NFT_IDS = ["0", "1", "2", "3", "4"];
 

@@ -35,6 +35,8 @@ export function jsonToSecret(json: any) : Secret {
 export function secretToPrivateKey(secret: Secret): string {
     return secret.secret
         .mul(MODULUS).add(secret.noise)
+        .mul(MODULUS).add(secret.tokenMask)
+        .mul(MODULUS).add(secret.tokenIdMask)
         .toHexString();
 }
 
@@ -46,11 +48,20 @@ export function secretToSharedKey(secret: Secret): string {
         .toHexString();
 }
 
-export function privateKeyToSecret(sKey: string) {
-    const num = BigNumber.from(sKey);
+export function privateKeyToSecret(pKey: string) {
+    let num = BigNumber.from(pKey);
+    const tokenIdMask = num.mod(MODULUS);
+    num = num.div(MODULUS);
+    const tokenMask = num.mod(MODULUS);
+    num = num.div(MODULUS);
+    const noise = num.mod(MODULUS);
+    num = num.div(MODULUS);
+    const secret = num.mod(MODULUS);
     return {
-        secret: num.div(MODULUS),
-        noise: num.mod(MODULUS),
+        secret,
+        noise,
+        tokenMask,
+        tokenIdMask,
     }
 }
 
@@ -96,7 +107,10 @@ export function generateSecret(): Secret {
 export function maskTokenData(
     tokenAddress: string,
     tokenId: BigNumber | string,
-    secret: Secret
+    secret: {
+        tokenMask: BigNumber,
+        tokenIdMask : BigNumber
+    } & any
 ) {
     const token = BigNumber.from(tokenAddress);
     tokenId = BigNumber.from(tokenId);
@@ -104,6 +118,20 @@ export function maskTokenData(
         token.add(secret.tokenMask).mod(MODULUS),
         tokenId.add(secret.tokenIdMask).mod(MODULUS),
     ]
+}
+
+export function unmaskTokenData(
+    maskedData: [BigNumber, BigNumber],
+    secret: {
+        tokenMask: BigNumber,
+        tokenIdMask : BigNumber
+    } & any
+) {
+    const [token, tokenId] = maskedData;
+    return {
+        tokenAddress: token.add(MODULUS).sub(secret.tokenMask).mod(MODULUS),
+        tokenId: tokenId.add(MODULUS).sub(secret.tokenIdMask).mod(MODULUS),
+    }
 }
 
 type SecretContext = {
