@@ -36,7 +36,8 @@ const config: HardhatUserConfig = {
         ptau: "pot18_final.ptau",
         // (required) Each object in this array refers to a separate circuit
         circuits: [
-            {name: "withdrawer_big"}
+            {name: "transfer"},
+            {name: "withdraw"}
         ],
     },
     networks: {

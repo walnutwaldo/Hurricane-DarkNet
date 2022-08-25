@@ -3,7 +3,7 @@ import SecretContext from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
+import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
@@ -13,7 +13,7 @@ const {groth16, zKey} = snarkjs;
 export function WithdrawSection() {
     const {chain, chains} = useNetwork()
 
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
@@ -35,7 +35,7 @@ export function WithdrawSection() {
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
     async function runProof(currentSecret: BigNumber) {
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0")));
+        const siblingsData = await contract.getPath(await contract.leafForPubkey(mimc(currentSecret, "0")));
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
@@ -54,7 +54,7 @@ export function WithdrawSection() {
         const {
             proof,
             publicSignals
-        } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
+        } = await groth16.fullProve(input, "circuit/withdraw.wasm", "circuit/withdraw.zkey");
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);

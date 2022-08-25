@@ -13,7 +13,7 @@ async function main() {
     const hurricaneContract = await Hurricane.attach(CONTRACT_ADDRESS);
 
     const leaf = BigNumber.from(LEAF);
-    const index = await hurricaneContract.indexOfLeaf(leaf);
+    const index = await hurricaneContract.leafForPubkey(leaf);
     console.log(`index: ${index}`);
 }
 

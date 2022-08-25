@@ -3,7 +3,7 @@ import SecretContext from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
+import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
@@ -14,7 +14,7 @@ const MODULUS = BigNumber.from("218882428718392752222464057452572750885483644004
 export function DepositSection() {
     const {chain, chains} = useNetwork()
 
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     console.log("chain name", chain?.name);
 
@@ -61,9 +61,9 @@ export function DepositSection() {
         		        const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
             		    const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
                 		const leaf = mimc(secret, "0");
-                		console.log(leaf, await contract.indexOfLeaf(leaf));
+                		console.log(leaf, await contract.leafForPubkey(leaf));
                         await makeDeposit(leaf);
-                		const isPaid = await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero()); // should be true
+                		const isPaid = await !((BigNumber.from(await contract.leafForPubkey(leaf))).isZero()); // should be true
 		                addAsset!({
     		                secret: secret,
         		            shared: leaf,

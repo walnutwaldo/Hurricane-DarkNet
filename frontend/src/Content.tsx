@@ -4,7 +4,7 @@ import SecretContext, {Secret} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "./contracts/deployInfo";
+import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "./contracts/deployInfo";
 import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
 import {TransferSection} from "./sections/TransferSection";
@@ -67,7 +67,7 @@ function SecretDisplay(props: any) {
 				<label><b>Status:</b></label>
             	<SecondaryButton onClick={async () => {
 					setRefreshing(true);
-                	const isPaid = !(BigNumber.from(await contract.indexOfLeaf(secret.shared)).isZero());
+                	const isPaid = !(BigNumber.from(await contract.leafForPubkey(secret.shared)).isZero());
 					upd(idx);
 					setRefreshing(false);
             	}} disabled={refreshing}>
@@ -85,7 +85,7 @@ function SecretDisplay(props: any) {
 function YourAssetsSection() {
     const {keys, assets, updateStatus} = useContext(SecretContext);
     const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     const {data: signer} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
@@ -146,7 +146,7 @@ function YourAssetsSection() {
 
 function GenerateSecretSection() {
     const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     const {data: signer} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
@@ -166,8 +166,8 @@ function GenerateSecretSection() {
                 const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
                 const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
 				const leaf = mimc(secret, "0");
-				console.log(leaf, await contract.indexOfLeaf(leaf));
-                const isPaid = await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero());
+				console.log(leaf, await contract.leafForPubkey(leaf));
+                const isPaid = await !((BigNumber.from(await contract.leafForPubkey(leaf))).isZero());
                 addKey!({
 					secret: secret,
 					shared: leaf,
