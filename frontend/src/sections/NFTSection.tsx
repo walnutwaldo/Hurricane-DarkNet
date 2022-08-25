@@ -6,13 +6,15 @@ import {useEffect, useState} from "react";
 import {useNetwork, useSigner} from "wagmi";
 
 const NETWORK_TO_CHAIN = {
-    'goerli': Network.ETH_GOERLI
+    'goerli': Network.ETH_GOERLI,
+    "ethereum": Network.ETH_MAINNET
 }
 
 export default function NFTSection() {
     const {data: signer} = useSigner();
     const {chain} = useNetwork()
     const networkName = chain && chain.name && chain.name.toLowerCase();
+    console.log("network name", networkName);
 
     const [nfts, setNFTs] = useState([]);
 
@@ -30,7 +32,7 @@ export default function NFTSection() {
                 console.log(res);
             }));
         }
-    }, [signer]);
+    }, [signer, networkName]);
 
     return (
         <div>
