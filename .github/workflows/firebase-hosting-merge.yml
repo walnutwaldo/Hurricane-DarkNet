@@ -17,5 +17,5 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HURRICANE_NFT_DARKNET }}'
           channelId: live
-          projectId: hurricane-nft-darknet
+          projectId: hurricane-mock-darknet
           entryPoint: "./frontend"
