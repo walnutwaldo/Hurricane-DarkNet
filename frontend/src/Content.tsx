@@ -66,7 +66,9 @@ function SecretDisplay(props: any) {
             	<SecondaryButton onClick={async () => {
 					setRefreshing(true);
                 	const isPaid = !(BigNumber.from(await contract.indexOfLeaf(secret.shared)).isZero());
-					upd(idx);
+					if (isPaid) {
+						upd(idx);
+					}
 					setRefreshing(false);
             	}} disabled={refreshing}>
             		Refresh
