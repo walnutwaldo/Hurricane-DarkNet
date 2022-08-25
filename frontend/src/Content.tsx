@@ -1,6 +1,6 @@
 import React, {useContext, useReducer, useState} from 'react';
 import {BigNumber, Contract} from "ethers";
-import SecretContext,  {Secret} from './contexts/SecretContext';
+import SecretContext, {Secret} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
@@ -9,6 +9,7 @@ import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
 import {TransferSection} from "./sections/TransferSection";
 import { rm } from 'fs';
+import { ActionSection } from './sections/ActionSection';
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -51,7 +52,6 @@ export function DisplayExport(props:any){
 
 function YourAssetsSection() {
     const {secrets, addSecret, removeSecret} = useContext(SecretContext);
-
     return (
         <div>
             <h3 className={"text-lg text-black font-bold"}>
@@ -124,7 +124,8 @@ export default function Content() {
                 
                 <div>
                     
-                    <DepositSection/> 
+                    <DepositSection/>
+                    <ActionSection/>
                 </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
                 Connect your wallet to be able to interact with Hurricane.

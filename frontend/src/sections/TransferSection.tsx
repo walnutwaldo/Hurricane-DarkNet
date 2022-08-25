@@ -1,5 +1,6 @@
 import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
+import ActionContext from "../contexts/ActionContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton, SecondaryButton} from "../components/buttons";
@@ -14,7 +15,7 @@ export function TransferSection(props: any) {
     const {idx, rm} = props
     const {chain, chains} = useNetwork();
     const secretContext = useContext(SecretContext);
-
+    const actionContext = useContext(ActionContext);
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);
@@ -118,6 +119,7 @@ export function TransferSection(props: any) {
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
+                        
                         if (isTransferring){
                             setTransferErrMsg("");
                             let currentSecret = BigNumber.from("0");

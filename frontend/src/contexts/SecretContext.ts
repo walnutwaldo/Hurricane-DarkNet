@@ -1,6 +1,5 @@
 import {BigNumber} from "ethers";
 import React from "react";
-
 export type Secret = {
     secret: BigNumber,
     shared: BigNumber,
@@ -12,10 +11,14 @@ type SecretContext = {
     removeSecret?: (idx: number) => void,
 }
 
+
 const DEFAULT_CONTEXT = {
     secrets: [],
 }
 
+
+
 const SecretContext = React.createContext<SecretContext>(DEFAULT_CONTEXT);
+
 
 export default SecretContext;

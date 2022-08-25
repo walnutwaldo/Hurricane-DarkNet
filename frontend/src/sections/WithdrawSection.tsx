@@ -1,5 +1,6 @@
 import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
+import ActionContext from "../contexts/ActionContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {PrimaryButton, SecondaryButton, AlertButton} from "../components/buttons";
 import {BigNumber, Contract, ethers} from "ethers";
@@ -17,7 +18,7 @@ export function WithdrawSection(props: any) {
     const {chain, chains} = useNetwork()
 
     const secretContext = useContext(SecretContext);
-
+    const actionContext = useContext(ActionContext);
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);

@@ -1,7 +1,7 @@
 import './styles/App.css';
 import Content from "./Content";
 import React from 'react';
-import {ConnectButton} from '@rainbow-me/rainbowkit';
+
 
 function App() {
     return (
@@ -22,9 +22,6 @@ function App() {
                                 </h2>
                             </div>
                         </div>
-                    </div>
-                    <div className={"mt-auto"}>
-                        <ConnectButton/>
                     </div>
                 </div>
             </div>
