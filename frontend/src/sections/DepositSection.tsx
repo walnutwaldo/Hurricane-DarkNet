@@ -6,6 +6,7 @@ import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
+import NFTSection from "./NFTSection";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -25,7 +26,6 @@ export function DepositSection() {
 
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
-	const [depositErrMsg, setDepositErrMsg] = useState("");
 
 	const {addAsset} = useContext(SecretContext);
 
@@ -47,8 +47,8 @@ export function DepositSection() {
     }
 
     return (
-        <div className={"mb-3"}>
-            <h3 className={"text-lg text-black font-bold"}>
+        <div>
+            <h3 className={"text-lg text-cyan-100 font-bold"}>
                 DEPOSIT
             </h3>
         	<div>
@@ -72,16 +72,18 @@ export function DepositSection() {
                     	Deposit 0.1 ETH
 					</PrimaryButton>
                     {isDepositing && (isPreparingTxn ? (
-                        <span>
+                        <span className="text-cyan-100">
                                         Preparing transaction <InlineLoader/>
                                     </span>
                     ) : (
-                        <span>
+                        <span className="text-cyan-100">
                                         Depositing <InlineLoader/>
                                     </span>
                     ))}
 				</div>
-				<div className={"text-red-500"}>{depositErrMsg}</div>
+				<div className="pt-2"> 
+					<NFTSection/>	
+				</div>
 			</div>
 		</div>
     )

@@ -4,6 +4,7 @@ import {Network, Alchemy} from "alchemy-sdk";
 import React from "react";
 import {useEffect, useState} from "react";
 import {useNetwork, useSigner} from "wagmi";
+import InlineLoaderFast from "../components/InlineLoaderFast";
 
 const NETWORK_TO_CHAIN = {
     'goerli': Network.ETH_GOERLI,
@@ -17,8 +18,10 @@ export default function NFTSection() {
     console.log("network name", networkName);
 
     const [nfts, setNFTs] = useState([]);
+	const [loadingNFTs, setLoadingNFTs] = useState(false);
 
     useEffect(() => {
+		setLoadingNFTs(true);
         if (signer && networkName && NETWORK_TO_CHAIN[networkName]) {
             const settings = {
                 apiKey: process.env.ALCHEMY_KEY,
@@ -30,13 +33,16 @@ export default function NFTSection() {
             signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
                 setNFTs(res.ownedNfts);
                 console.log(res);
+				setLoadingNFTs(false);
             }));
         }
     }, [signer, networkName]);
 
     return (
         <div>
-            NFTs
+            <span className="text-cyan-100 font-bold text-lg">
+				{loadingNFTs ? <> Loading Your NFTs <InlineLoaderFast/></>: "Your NFTs"}
+			</span>
             <div className={"flex flex-row gap-2"}>
                 {nfts.map((nft: any, idx: number) => {
                     return (

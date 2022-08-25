@@ -1,12 +1,12 @@
 import React from "react";
 
-class InlineLoader extends React.Component<any, any> {
+class InlineLoaderFast extends React.Component<any, any> {
 
     interval: any;
 
     constructor(props: any) {
         super(props);
-        this.state = {dots: 1};
+        this.state = {dots: 2};
     }
 
     componentDidMount() {
@@ -14,7 +14,7 @@ class InlineLoader extends React.Component<any, any> {
             this.setState((prevState: any) => ({
                 dots: (prevState.dots + 1) % 4
             }));
-        }, 500);
+        }, 300);
     }
 
     componentWillUnmount() {
@@ -38,4 +38,4 @@ class InlineLoader extends React.Component<any, any> {
 
 }
 
-export default InlineLoader;
+export default InlineLoaderFast;
