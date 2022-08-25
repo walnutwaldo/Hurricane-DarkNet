@@ -119,7 +119,6 @@ export function TransferSection(props: any) {
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        
                         if (isTransferring){
                             setTransferErrMsg("");
                             let currentSecret = BigNumber.from("0");
@@ -134,7 +133,6 @@ export function TransferSection(props: any) {
                                 setTransferErrMsg("Secret out of bounds");
                                 return;
                             }
-                            setGeneratingProof(true);
                             let receiverShared = BigNumber.from("0");
                             try {
                                 receiverShared = BigNumber.from(shRef.current!.value);
@@ -147,12 +145,14 @@ export function TransferSection(props: any) {
                                 setTransferErrMsg("Secret out of bounds");
                                 return;
                             }
+                            setGeneratingProof(true);
                             runProof(currentSecret, receiverShared).then(() => {
                                 setGeneratingProof(false);
                                 makeTransfer(receiverShared);
+                                  
                             })
-                        }
-                        else{
+                            console.log(JSON.stringify(proof, null, 2))
+                        } else{
                             setIsTransferring(true);
                         }
                     }} disabled = {generatingProof}>
@@ -161,23 +161,9 @@ export function TransferSection(props: any) {
                     
                 </div>
                 <div>
-                    {
-                        generatingProof ? (
-                            <span>Generating Proof <InlineLoader/></span>
-                        ) : (
-                            <div>
-                                {
-                                    proof && (<>
-                                        Proof
-                                        <div
-                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 h-72 overflow-y-scroll whitespace-pre-wrap"}>
-                                            {JSON.stringify(proof, null, 2)}
-                                        </div>
-                                    </>)
-                                }
-                            </div>
-                        )
-                    }
+                    {generatingProof && (
+                        <span>Generating Proof <InlineLoader/></span>
+                    )}  
                 </div>
             </div>
         </div>

@@ -16,8 +16,6 @@ const DEFAULT_CONTEXT = {
     secrets: [],
 }
 
-
-
 const SecretContext = React.createContext<SecretContext>(DEFAULT_CONTEXT);
 
 
