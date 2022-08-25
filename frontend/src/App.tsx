@@ -11,6 +11,7 @@ function App() {
         <div className={"bg-stone-200 pt-4 flex flex-col h-full"}>
             <div className={"bg-stone-800 container mx-auto p-4 rounded-2xl"}>
                 <div className="p-4 flex flex-row justify-between">
+					<>
                     <div className={"flex flex-col"}>
                         <div className={"flex flex-row gap-4"}>
                             <img alt={"logo"} src={"HurricaneNFTsLogo.png"} height={196} width={196}
@@ -26,9 +27,10 @@ function App() {
                             </div>
                         </div>
                     </div>
-                    {signer && <div className={"mt-auto"}>
-                        <ConnectButton/>
-                    </div>}
+					<div className={"mt-auto"}>
+						{signer ? <></> : <ConnectButton/>}
+					</div>
+					</>
                 </div>
             </div>
             <div className={"container mx-auto py-4 flex-1"}>

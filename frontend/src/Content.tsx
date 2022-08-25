@@ -6,10 +6,54 @@ import {WithdrawSection} from "./sections/WithdrawSection";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "./contracts/deployInfo";
 import {useNetwork, useSigner} from "wagmi";
 import {TransferSection} from "./sections/TransferSection";
-import {ConnectButton} from "@rainbow-me/rainbowkit";
-import NFTSection from "./sections/NFTSection";
 import {GenerateSecretSection} from "./sections/GenSecretSection";
-import {SecretDisplay} from "./components/SecretDisplay";
+import {ConnectButton} from '@rainbow-me/rainbowkit';
+import {AlertButton, PrimaryButton} from "./components/buttons";
+
+function AssetDisplay(props: any) {
+    const {removeAsset, updateStatus} = useContext(SecretContext);
+    
+    const {secret, idx} = props;
+    
+    const [enableSecretCopy, setEnableSecretCopy] = useState(true);
+    const [enableExporting, setEnableExporting] = useState(true);
+
+    return (
+        <div className={"flex flex-row gap-3 text-white"}>
+			<AlertButton onClick={() => {
+				removeAsset!(idx);
+			}}>
+				Delete
+			</AlertButton>
+			<label><b>Your Asset Name</b></label>
+            <WithdrawSection idx={idx} rm={removeAsset}/>
+            <TransferSection idx={idx} rm={removeAsset}/>
+            <PrimaryButton onClick={() => {
+                // Remove the secret
+                console.log("i am the secret", secret);
+                setEnableExporting(!enableExporting);
+                if (enableExporting){
+                    navigator.clipboard.writeText(secret.secret!.toHexString());
+                }
+                return(<div></div>);
+            }} >
+                {enableExporting ? "Export Secret" : "Copy"}
+            </PrimaryButton>
+            {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+             	{ secret.secret!.toHexString().substr(0,10) +"..."}
+            </span> }
+        </div>
+    )
+}
+
+export function DisplayExport(props:any){
+    const {secret} = props
+    return (
+        < span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+            {secret.toHexString().substr(0,10) + "..."}
+        </span>
+    )
+}
 
 function YourAssetsSection() {
     const {keys, assets} = useContext(SecretContext);
@@ -21,60 +65,63 @@ function YourAssetsSection() {
 
     return (
         <div>
-            {
-                keys.length + assets.length == 0 ? "Add assets or generate key to begin." : <>
-                    {
-                        assets.length == 0 ? <></> : <>
-                            <h3 className={"text-lg text-black font-bold"}>
-                                YOUR ASSETS
-                            </h3>
-                            <div className={"flex flex-col gap-2"}>
-                                {
-                                    assets.map(function (secret, idx) {
-                                        return (
-                                            <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
-                                                <div className="flex flex-row justify-between">
-                                                    {/*<span className={"text-white"}></span>*/}
-                                                    <SecretDisplay
-                                                        secret={secret}
-                                                        idx={idx}
-                                                        contract={contract}
-                                                        isAsset={true}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                }
-                            </div>
-                        </>
-                    }
-                    {
-                        keys.length == 0 ? <></> : <>
-                            <h3 className={"text-lg text-black font-bold"}>
-                                YOUR KEYS
-                            </h3>
-                            <div className={"flex flex-col gap-2"}>
-                                {
-                                    keys.map(function (secret, idx) {
-                                        return (
-                                            <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
-                                                <div className="flex flex-row justify-between">
-                                                    {/*<span className={"text-white"}></span>*/}
-                                                    <SecretDisplay secret={secret} idx={idx} contract={contract}
-                                                                   isAsset={false}/>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                }
-                            </div>
-                        </>
-                    }
-                </>
-            }
+			{
+				assets.length == 0 ? "No assets entered!" : <>
+            		<h3 className={"text-lg text-black font-bold"}>
+                		YOUR ASSETS
+            		</h3>
+            		<div className={"flex flex-col gap-2"}>
+                		{
+                    		assets.map(function (secret, idx) {
+                        		return (
+                            		<div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
+                               			<div className="flex flex-row justify-between">
+                                   			{/*<span className={"text-white"}></span>*/}
+                                   			<AssetDisplay secret={secret} idx={idx}/>
+                               			</div>
+                           			</div>
+                        		)
+                    		})
+                		}
+            		</div>
+				</>
+			}
         </div>
     )
+}
+
+function DepositReceiveSection() {
+    const {data: signer, isError, isLoading} = useSigner();
+	const [DRState, setDRState] = useState("");
+
+	return (<div className="mb-3">
+		<div className="grid grid-cols-4 gap-2">
+			<PrimaryButton onClick={() => {
+				setDRState("deposit");	
+			}} disabled={DRState == "deposit"}>
+				Deposit
+			</PrimaryButton>
+			<PrimaryButton onClick={() => {
+				setDRState("receive");
+			}} disabled={DRState == "receive"}>
+				Receive
+			</PrimaryButton>
+			<div className="col-span-2">
+				{signer && <div className={"mt-auto"}>
+                        <ConnectButton/>
+                </div>}
+			</div>	
+		</div>
+		<div className="pt-6">
+			{ 
+				DRState == "" ? <></> : <div className="bg-darkgreen p-2 rounded-lg">
+					{
+						DRState == "deposit" ? <DepositSection/> : <GenerateSecretSection/>
+					}		
+				</div>
+			}
+		</div>
+	</div>)
 }
 
 const KEYS_LOCALHOST_KEY = 'hurricane_keys';
@@ -146,24 +193,18 @@ export default function Content() {
             removeAsset: removeAsset,
             updateStatus: updateStatus
         }}>
-            {signer ? <div className="grid grid-cols-3 gap-8">
+            {signer ? <div className="grid grid-cols-4 gap-8">
                 <div className="col-span-2">
-                    <YourAssetsSection/>
-                </div>
-                <div>
-                    <GenerateSecretSection/>
-                    <DepositSection/>
-                    <WithdrawSection/>
-                    <TransferSection/>
-                    <NFTSection/>
+					<YourAssetsSection/>
+				</div>
+                <div className="col-span-2">
+					<DepositReceiveSection/>
                 </div>
             </div> : <div className={"font-bold text-darkgreen text-2xl text-center h-full flex flex-col"}>
                 <div className={"my-auto flex flex-col gap-2 items-center"}>
                     <h1>Connect your wallet to be able to interact with Hurricane.</h1>
-                    <ConnectButton/>
                 </div>
             </div>}
         </SecretContext.Provider>
-
     );
 }

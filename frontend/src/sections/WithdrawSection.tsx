@@ -1,11 +1,11 @@
-import React, {useContext, useEffect, useRef, useState} from "react";
-import SecretContext, {privateKeyToSecret, Secret, unmaskTokenData} from "../contexts/SecretContext";
-import {useContractRead, useNetwork, useSigner} from "wagmi";
-import {BigNumber, Contract, ethers} from "ethers";
+import React, {useContext, useRef, useState} from "react";
+import SecretContext from "../contexts/SecretContext";
+import {useNetwork, useSigner} from "wagmi";
 import {PrimaryButton} from "../components/buttons";
+import {BigNumber, Contract} from "ethers";
 import {
     HURRICANE_CONTRACT_ABI,
-    HURRICANE_CONTRACT_ADDRESSES, NFT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES,
     NFT_ADDRESS_HARDCODED,
     NFT_ID_HARDCODED
 } from "../contracts/deployInfo";
@@ -15,11 +15,14 @@ import {useNftFromSecret} from "../utils/useNftFromSecret";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-export function WithdrawSection() {
+export function WithdrawSection(props: any) {
+    const {idx, rm} = props
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
+    const secretContext = useContext(SecretContext);
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
@@ -27,19 +30,7 @@ export function WithdrawSection() {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const sRef = useRef<HTMLInputElement>(null);
-    const [currentSecret, setCurrentSecret] = useState<any>(undefined);
-
-    function updateSecret() {
-        try {
-            setCurrentSecret(
-                sRef.current ? (
-                    privateKeyToSecret(sRef.current!.value) || undefined
-                ) : undefined
-            );
-        } catch {
-            setCurrentSecret(undefined);
-        }
-    }
+    const currentSecret = secretContext!.assets[idx];
 
     const [nftContract, nftInfo] = useNftFromSecret(currentSecret);
 
@@ -98,7 +89,11 @@ export function WithdrawSection() {
         console.log("publicSignals", publicSignals);
     }
 
-    const withdrawArgs = (proof && publicSignals) ? [
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
+    const [isPreparingTxn, setIsPreparingTxn] = useState(false);
+
+    const withdrawArgs = (proof && publicSignals && rootIdx) ? [
         [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
         [
             [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
@@ -106,15 +101,11 @@ export function WithdrawSection() {
         ],
         [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
         publicSignals.map((s) => BigNumber.from(s)),
+        BigNumber.from(rootIdx),
     ] : [];
-
-    const [isWithdrawing, setIsWithdrawing] = useState(false);
-    const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
-    const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeWithdrawal() {
         setIsWithdrawing(true);
-
         setIsPreparingTxn(true);
         const tx = await contract.withdraw(
             ...withdrawArgs,
@@ -126,63 +117,28 @@ export function WithdrawSection() {
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
-        const result = await tx.wait();
+        let result = await tx.wait(); // dis    
         setIsWithdrawing(false);
         setProof(undefined);
+        rm!(idx);
     }
 
     return (
-        <div className={"mb-3"}>
-            <h3 className={"text-lg text-black font-bold"}>
-                WITHDRAW
+        <div className={""}>
+            <h3 className={"text-lg text-white font-bold"}>
             </h3>
+            <PrimaryButton type="submit" onClick={() => {
+                setWithdrawErrMsg("");
+                setGeneratingProof(true);
+                runProof(currentSecret).then(() => {
+                    setGeneratingProof(false);
+                    makeWithdrawal();
+                })
+                
+                }} disabled={generatingProof}>
+                    {isWithdrawing ? "Withdrawing" : "Withdraw"}
+            </PrimaryButton>
             <div>
-                <label>Secret:</label>
-                <input
-                    type="text"
-                    name="secretTextbox"
-                    ref={sRef}
-                    className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}
-                    onChange={updateSecret}
-                /><br/>
-                <div className="flex flex-row gap-2">
-                    <PrimaryButton type="submit" onClick={() => {
-                        if (!currentSecret) {
-                            setWithdrawErrMsg("Please enter a secret");
-                        } else {
-                            setWithdrawErrMsg("");
-                            setGeneratingProof(true);
-                            runProof(currentSecret).then(() => {
-                                setGeneratingProof(false);
-                            })
-                        }
-                    }} disabled={generatingProof}>
-                        Generate Proof
-                    </PrimaryButton>
-                    {proof &&
-                        (<>
-                                <PrimaryButton onClick={() => {
-                                    makeWithdrawal();
-                                }} disabled={isWithdrawing}>
-                                    {
-                                        isWithdrawing ?
-                                            <span>Withdrawing <InlineLoader/></span> : `Withdraw ${nftInfo?.name || "unknown"}`
-                                    }
-                                </PrimaryButton>
-                                {isWithdrawing && (
-                                    isPreparingTxn ? (
-                                        <span>
-                                            Preparing transaction <InlineLoader/>
-                                        </span>
-                                    ) : (
-                                        <span>
-                                            Withdrawing <InlineLoader/>
-                                        </span>
-                                    )
-                                )}
-                            </>
-                        )
-                    }
                 </div>
                 <div className={"text-red-500"}>{withdrawErrMsg}</div>
                 <div>
@@ -205,6 +161,5 @@ export function WithdrawSection() {
                     }
                 </div>
             </div>
-        </div>
     )
 }
