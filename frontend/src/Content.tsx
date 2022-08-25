@@ -1,23 +1,28 @@
-import React, {useContext, useReducer, useState} from 'react';
+import React, {useContext, useState} from 'react';
 import {BigNumber, Contract} from "ethers";
-import SecretContext, {Secret} from './contexts/SecretContext';
-import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
+import SecretContext, {
+    jsonToSecret,
+    Secret,
+    secretToJson,
+    secretToPrivateKey,
+    secretToSharedKey
+} from './contexts/SecretContext';
+import {AlertButton, SecondaryButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "./contracts/deployInfo";
-import {useSigner, useNetwork} from "wagmi";
-import mimc from "./crypto/mimc";
+import {useNetwork, useSigner} from "wagmi";
 import {TransferSection} from "./sections/TransferSection";
 import {ConnectButton} from "@rainbow-me/rainbowkit";
 import NFTSection from "./sections/NFTSection";
-
-const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+import {GenerateSecretSection} from "./sections/GenSecretSection";
 
 function SecretDisplay(props: any) {
+
     const {removeAsset, removeKey, updateStatus} = useContext(SecretContext);
-    
+
     const {secret, idx, upd, contract, isAsset} = props;
-    
+
     const [enableSecretCopy, setEnableSecretCopy] = useState(isAsset);
 	const [enableSharedCopy, setEnableSharedCopy] = useState(true);
     const [enableIsPaidCopy, setEnableIsPaidCopy] = useState(true);
@@ -33,7 +38,7 @@ function SecretDisplay(props: any) {
 			<label><b>Secret key:</b></label>
             <SecondaryButton onClick={() => {
                 // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(secret.secret!.toHexString());
+                navigator.clipboard.writeText(secretToPrivateKey(secret));
                 setEnableSecretCopy(false);
                 setTimeout(() => {
                     setEnableSecretCopy(true);
@@ -41,19 +46,15 @@ function SecretDisplay(props: any) {
             }} disabled={!enableSecretCopy}>
                 {enableSecretCopy || !isAsset ? "Copy" : "Copied!"}
             </SecondaryButton>
-            {	
-				isAsset ? 	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                	{secret.secret.toHexString().substr(0,6) + "..."}
-            	</span> : <   span className={"px-1 bg-zinc-400 text-zinc-900 rounded-md font-mono"}>
-                	{secret.secret.toHexString().substr(0,6) + "..."}
-				</span>
-			}
+            <span className={"px-1 bg-zinc-400 text-zinc-900 rounded-md font-mono"}>
+                {secretToPrivateKey(secret).substr(0,6) + "..."}
+            </span>
             {
 				isAsset ? <></> : <>
 				<label><b>Shared key:</b></label>
             	<SecondaryButton onClick={() => {
                 	// Copy secret.toHexString() to clipboard
-                	navigator.clipboard.writeText(secret.shared!.toHexString());
+                	navigator.clipboard.writeText(secretToSharedKey(secret));
                 	setEnableSharedCopy(false);
                 	setTimeout(() => {
                     	setEnableSharedCopy(true);
@@ -62,7 +63,7 @@ function SecretDisplay(props: any) {
                 	{enableSharedCopy ? "Copy" : "Copied!"}
             	</SecondaryButton>
             	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                	{secret.shared.toHexString().substr(0,6) + "..."}
+                	{secretToSharedKey(secret).substr(0,6) + "..."}
             	</span>
 				<label><b>Status:</b></label>
             	<SecondaryButton onClick={async () => {
@@ -89,7 +90,7 @@ function YourAssetsSection() {
 
     const {data: signer} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-	
+
     return (
         <div>
 			{
@@ -119,10 +120,10 @@ function YourAssetsSection() {
 				{
 					keys.length == 0 ? <></> : <>
             			<h3 className={"text-lg text-black font-bold"}>
-                			YOUR KEYS 
+                			YOUR KEYS
             			</h3>
             			<div className={"flex flex-col gap-2"}>
-                			{ 
+                			{
                     			keys.map(function (secret, idx) {
 									console.log("Secret", idx, secret);
                         			return (
@@ -144,41 +145,6 @@ function YourAssetsSection() {
     )
 }
 
-function GenerateSecretSection() {
-    const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
-
-    const {data: signer} = useSigner()
-    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-    
-    const {addKey} = useContext(SecretContext);
-    const [enableCopy, setEnableCopy] = useState(true);
-
-    return (<div className={"mb-3"}>
-        <h3 className={"text-lg text-black font-bold"}>
-            GENERATE A SECRET
-        </h3>
-        <div className="flex flex-row gap-2">
-            <PrimaryButton onClick={async () => {
-				console.log("Generating");
-                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
-                // Concatenate into hex string
-                const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
-                const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
-				const leaf = mimc(secret, "0");
-				console.log(leaf, await contract.leafForPubkey(leaf));
-                const isPaid = await !((BigNumber.from(await contract.leafForPubkey(leaf))).isZero());
-                addKey!({
-					secret: secret,
-					shared: leaf,
-				});
-			}}>
-                Generate 
-            </PrimaryButton>
-        </div>
-    </div>)
-}
-
 const KEYS_LOCALHOST_KEY = 'hurricane_keys';
 const ASSETS_LOCALHOST_KEY = 'hurricane_assets';
 
@@ -187,34 +153,22 @@ export default function Content() {
     console.log("signer", signer);
 
     const [keys, setKeys] = useState(
-        JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map((keyJson: any) => ({
-            secret: BigNumber.from(keyJson.secret),
-            shared: BigNumber.from(keyJson.shared),
-        }))
+        JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
     function saveKeys(newKeys: Secret[]) {
         localStorage.setItem(KEYS_LOCALHOST_KEY, JSON.stringify(
-            newKeys.map((secret) => ({
-                secret: secret.secret.toString(),
-                shared: secret.shared.toString(),
-            }))
+            newKeys.map(secretToJson)
         ));
     }
 
     const [assets, setAssets] = useState(
-        JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map((assetJson: any) => ({
-            secret: BigNumber.from(assetJson.secret),
-            shared: BigNumber.from(assetJson.shared),
-        }))
+        JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
     function saveAssets(newAssets: Secret[]) {
         localStorage.setItem(ASSETS_LOCALHOST_KEY, JSON.stringify(
-            newAssets.map((secret) => ({
-                secret: secret.secret.toString(),
-                shared: secret.shared.toString(),
-            }))
+            newAssets.map(secretToJson)
         ));
     }
 

@@ -1,9 +1,14 @@
-import React, {useContext, useRef, useState} from "react";
-import SecretContext from "../contexts/SecretContext";
+import React, {useContext, useEffect, useRef, useState} from "react";
+import SecretContext, {privateKeyToSecret, Secret} from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES, NFT_ABI,
+    NFT_ADDRESS_HARDCODED,
+    NFT_ID_HARDCODED
+} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
@@ -22,6 +27,17 @@ export function WithdrawSection() {
 
     const sRef = useRef<HTMLInputElement>(null);
 
+    const nft = new Contract(NFT_ADDRESS_HARDCODED, NFT_ABI, signer!);
+    const [nftInfo, setNftInfo] = useState<any>(undefined);
+
+    useEffect(() => {
+        nft.tokenURI(NFT_ID_HARDCODED).then((tokenURI: any) => {
+            fetch(tokenURI).then(res=>res.json()).then((res: any) => {
+                setNftInfo(res);
+            });
+        });
+    }, [])
+
     const [proof, setProof] = useState<{
         pi_a: [string, string],
         pi_b: [[string, string], [string, string]],
@@ -31,23 +47,30 @@ export function WithdrawSection() {
         publicSignals,
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
-    
+
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
-    async function runProof(currentSecret: BigNumber) {
-        const siblingsData = await contract.getPath(await contract.leafForPubkey(mimc(currentSecret, "0")));
+    async function runProof(
+        secret: {
+            secret: BigNumber,
+            noise: BigNumber
+        }
+    ) {
+        const leafIdx = await contract.leafForPubkey(mimc(secret.secret, "0"));
+        const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
-
-        console.log(siblingsData);
 
         // console.log("siblings", siblingsData);
         // console.log("dir", dir);
         const input = {
             mimcK: "0",
-            receiver: await signer!.getAddress(),
-            secret: currentSecret.toString(),
+            tokenAddress: NFT_ADDRESS_HARDCODED,
+            tokenId: NFT_ID_HARDCODED,
+            withdrawer: await signer!.getAddress(),
+            secret: secret.secret.toString(),
+            secretNoise: secret.noise.toString(),
             others: others,
             dir: dir,
         }
@@ -55,6 +78,17 @@ export function WithdrawSection() {
             proof,
             publicSignals
         } = await groth16.fullProve(input, "circuit/withdraw.wasm", "circuit/withdraw.zkey");
+
+        const merkleRoot = publicSignals[0];
+
+        console.log({
+            leafIdx,
+            others,
+            dir,
+            rootIdx,
+            merkleRoot
+        });
+
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
@@ -81,7 +115,7 @@ export function WithdrawSection() {
         setIsPreparingTxn(true);
         const tx = await contract.withdraw(
             ...withdrawArgs,
-            rootIdx
+            rootIdx,
         ).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
@@ -106,17 +140,7 @@ export function WithdrawSection() {
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
                         setWithdrawErrMsg("");
-                        let currentSecret = BigNumber.from("0");
-                        try {
-                            currentSecret = BigNumber.from(sRef.current!.value);
-                        } catch (err) {
-                            setWithdrawErrMsg("Use an actual number for the secret!");
-                            return;
-                        }
-                        if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setWithdrawErrMsg("Secret out of bounds");
-                            return;
-                        }
+                        let currentSecret = privateKeyToSecret(sRef.current!.value);
                         setGeneratingProof(true);
                         runProof(currentSecret).then(() => {
                             setGeneratingProof(false);
@@ -131,7 +155,7 @@ export function WithdrawSection() {
                                 }} disabled={isWithdrawing}>
                                     {
                                         isWithdrawing ?
-                                            <span>Withdrawing <InlineLoader/></span> : "Withdraw 0.1 ETH"
+                                            <span>Withdrawing <InlineLoader/></span> : `Withdraw ${nftInfo?.name || "unknown"}`
                                     }
                                 </PrimaryButton>
                                 {isWithdrawing && (

@@ -1,9 +1,9 @@
 import {ethers} from "hardhat";
 import {BigNumber} from "ethers";
 
-const NFT_ADDRESS = "0x217990C3cbecb320ea6d70bcD98dBF4f14d4a197";
+const NFT_ADDRESS = "0x525C7063E7C20997BaaE9bDa922159152D0e8417";
 const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
-const NFT_IDS = ["5558", "4363", "4690", "5909"];
+const NFT_IDS = ["0", "1", "2", "3", "4"];
 
 async function main() {
     const signers = await ethers.getSigners();

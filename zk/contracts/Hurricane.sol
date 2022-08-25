@@ -1,16 +1,23 @@
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "./WithdrawVerifier.sol";
 import "./TransferVerifier.sol";
 import "./openzeppelin/utils/ReentrancyGuard.sol";
 import "./openzeppelin/access/Ownable.sol";
 import "./openzeppelin/token/ERC721/IERC721.sol";
+import "./openzeppelin/token/ERC721/IERC721Receiver.sol";
 
 interface IHasher {
     function MiMCSponge(uint256 in_xL, uint256 in_xR, uint256 k) external pure returns (uint256 xL, uint256 xR);
 }
 
-contract Hurricane is ReentrancyGuard, Ownable {
+contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
+
+    struct MaskedData {
+        uint maskedAddress;
+        uint maskedId;
+    }
 
     WithdrawVerifier immutable public withdrawVerifier;
     TransferVerifier immutable public transferVerifier;
@@ -26,7 +33,7 @@ contract Hurricane is ReentrancyGuard, Ownable {
     uint[][31] merkleTree;
 
     mapping(uint => uint) public leafForPubkey;
-    mapping(uint => uint) public dataForPubkey;
+    mapping(uint => MaskedData) public dataForPubkey;
 
     mapping(uint => bool) public nullifiers;
 
@@ -75,7 +82,7 @@ contract Hurricane is ReentrancyGuard, Ownable {
 
     function depositUpdate(
         uint publicKey,
-        uint256 data,
+        MaskedData memory data,
         uint leaf
     ) internal {
         uint currIndex = numLeaves();
@@ -108,10 +115,22 @@ contract Hurricane is ReentrancyGuard, Ownable {
         uint publicKey,
         IERC721 token,
         uint256 tokenId,
-        uint256 data,
-        uint leaf
-    ) public payable nonReentrant {
-        require(msg.value == 0.1 ether, "Deposit must be 0.1 ether");
+        MaskedData memory data,
+        uint noise // Can be public here because the NFT data is know anyway
+    ) public nonReentrant {
+        uint leaf = hashLeftRight(
+            hasher,
+            publicKey,
+            hashLeftRight(
+                hasher,
+                hashLeftRight(
+                    hasher,
+                    uint256(uint160(address(token))),
+                    tokenId
+                ),
+                noise
+            )
+        );
         depositUpdate(publicKey, data, leaf);
         token.safeTransferFrom(msg.sender, address(this), tokenId);
     }
@@ -157,7 +176,7 @@ contract Hurricane is ReentrancyGuard, Ownable {
         uint[2] memory c,
         uint[5] memory input,
         uint8 rootIdx,
-        uint256 data
+        MaskedData memory data
     ) public nonReentrant {
         require(transferVerifier.verifyProof(a, b, c, input), "Transfer proof is invalid");
         withdrawUpdate(
@@ -182,14 +201,23 @@ contract Hurricane is ReentrancyGuard, Ownable {
         rootIdx = rootIndex;
     }
 
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
     // --------------------------------------------------------------
     //                          BACKDOOR
     // --------------------------------------------------------------
 
-    function rescueFunds() public onlyOwner {
-        (bool success, bytes memory data) = msg.sender.call{value : address(this).balance}("");
-        require(success, "Rescue failed");
-    }
+//    function rescueFunds() public onlyOwner {
+//        (bool success, bytes memory data) = msg.sender.call{value : address(this).balance}("");
+//        require(success, "Rescue failed");
+//    }
 
     function rescueNft(
         IERC721 token,

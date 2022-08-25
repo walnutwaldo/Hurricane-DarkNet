@@ -1,15 +1,19 @@
-import React, {useContext, useRef, useState} from "react";
-import SecretContext from "../contexts/SecretContext";
+import React, {useContext, useEffect, useRef, useState} from "react";
+import SecretContext, {generateSecret, maskTokenData, Secret} from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES,
+    NFT_ABI,
+    NFT_ADDRESS_HARDCODED, NFT_ID_HARDCODED
+} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
-const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 export function DepositSection() {
     const {chain, chains} = useNetwork()
@@ -21,27 +25,63 @@ export function DepositSection() {
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
-	const shRef = useRef<HTMLInputElement>(null);
+    const shRef = useRef<HTMLInputElement>(null);
 
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
-	const [depositErrMsg, setDepositErrMsg] = useState("");
+    const [depositErrMsg, setDepositErrMsg] = useState("");
 
-	const {addAsset} = useContext(SecretContext);
+    const {addAsset} = useContext(SecretContext);
 
-    async function makeDeposit(currentShared: BigNumber ) {
+    const nft = new Contract(NFT_ADDRESS_HARDCODED, NFT_ABI, signer!);
+    const [isApproved, setIsApproved] = useState(false);
+
+    useEffect(() => {
+        nft.getApproved(NFT_ID_HARDCODED).then((approved: any) => {
+            console.log("approved:", approved);
+            setIsApproved(approved === contractAddress);
+        });
+    }, [])
+
+    async function approveNFT() {
+        const approvalTx = await nft.approve(contractAddress, NFT_ID_HARDCODED);
+        console.log("approval tx", approvalTx);
+        const approveResult = await approvalTx.wait();
+        console.log("approval result", approveResult);
+
+        if (!approveResult.status) {
+            setDepositErrMsg("Approval failed");
+            return;
+        } else {
+            setIsApproved(true);
+        }
+    }
+
+    async function makeDeposit(
+        secret: Secret,
+        tokenAddress: string,
+        tokenId: BigNumber | string
+    ) {
         setIsDepositing(true);
         setIsPreparingTxn(true);
-        const leaf = currentShared;
-        const tx = await contract.deposit(leaf, {
-            value: ethers.utils.parseEther('0.1')
-        }).catch((err: any) => {
+        tokenId = BigNumber.from(tokenId);
+
+        const tx = await contract.deposit(
+            secret.shared,
+            tokenAddress,
+            tokenId,
+            maskTokenData(
+                tokenAddress,
+                tokenId,
+                secret
+            ),
+            secret.noise
+        ).catch((err: any) => {
             console.log(err);
             setIsDepositing(false);
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
-
         const result = await tx.wait();
         setIsDepositing(false);
     }
@@ -51,38 +91,35 @@ export function DepositSection() {
             <h3 className={"text-lg text-black font-bold"}>
                 DEPOSIT
             </h3>
-        	<div>
+            <div>
                 <div className="flex flex-row gap-2">
                     <PrimaryButton onClick={async () => {
-						// first, generate
-						console.log("Generating");
-		                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
-    		            // Concatenate into hex string
-        		        const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
-            		    const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
-                		const leaf = mimc(secret, "0");
-                		console.log(leaf, await contract.leafForPubkey(leaf));
-                        await makeDeposit(leaf);
-                		const isPaid = await !((BigNumber.from(await contract.leafForPubkey(leaf))).isZero()); // should be true
-		                addAsset!({
-    		                secret: secret,
-        		            shared: leaf,
-                		});
+                        // first, generate
+                        if (isApproved) {
+                            console.log("Generating Secret");
+                            const secret = generateSecret();
+                            const nftAddress = NFT_ADDRESS_HARDCODED;
+                            const nftId = NFT_ID_HARDCODED;
+                            await makeDeposit(secret, nftAddress, nftId);
+                            addAsset!(secret);
+                        } else {
+                            approveNFT();
+                        }
                     }} disabled={isDepositing}>
-                    	Deposit 0.1 ETH
-					</PrimaryButton>
+                        {isApproved ? "Deposit NFT" : "Approve NFT"}
+                    </PrimaryButton>
                     {isDepositing && (isPreparingTxn ? (
                         <span>
-                                        Preparing transaction <InlineLoader/>
-                                    </span>
+                            Preparing transaction <InlineLoader/>
+                        </span>
                     ) : (
                         <span>
-                                        Depositing <InlineLoader/>
-                                    </span>
+                            Depositing <InlineLoader/>
+                        </span>
                     ))}
-				</div>
-				<div className={"text-red-500"}>{depositErrMsg}</div>
-			</div>
-		</div>
+                </div>
+                <div className={"text-red-500"}>{depositErrMsg}</div>
+            </div>
+        </div>
     )
 }
