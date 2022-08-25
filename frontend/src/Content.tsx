@@ -9,6 +9,7 @@ import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
 import {TransferSection} from "./sections/TransferSection";
 import {ConnectButton} from "@rainbow-me/rainbowkit";
+import NFTSection from "./sections/NFTSection";
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -270,6 +271,7 @@ export default function Content() {
                     <DepositSection/>
                     <WithdrawSection/>
                     <TransferSection/>
+                    <NFTSection/>
                 </div>
             </div> : <div className={"font-bold text-darkgreen text-2xl text-center h-full flex flex-col"}>
                 <div className={"my-auto flex flex-col gap-2 items-center"}>
