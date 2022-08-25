@@ -17,7 +17,6 @@ export function WithdrawSection(props: any) {
     const {chain, chains} = useNetwork()
 
     const secretContext = useContext(SecretContext);
-
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);

@@ -1,6 +1,6 @@
 import React, {useContext, useReducer, useState} from 'react';
 import {BigNumber, Contract} from "ethers";
-import SecretContext,  {Secret} from './contexts/SecretContext';
+import SecretContext, {Secret} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
@@ -8,8 +8,9 @@ import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "./contracts/de
 import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
 import {TransferSection} from "./sections/TransferSection";
-import {ConnectButton} from "@rainbow-me/rainbowkit";
 import NFTSection from "./sections/NFTSection";
+import { rm } from 'fs';
+import {ConnectButton} from '@rainbow-me/rainbowkit';
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -153,7 +154,7 @@ function YourKeysSection() {
 	return (
 		<div>
 			{ keys.length == 0 ? "No outgoing requests." : <>
-            	<h3 className={"text-lg text-black font-bold"}>
+            	<h3 className={"text-lg text-cyan-100 font-bold"}>
                 	YOUR REQUESTS
             	</h3>
             	<div className={"flex flex-col gap-2"}>
@@ -216,6 +217,7 @@ function GenerateSecretSection() {
 }
 
 function DepositReceiveSection() {
+    const {data: signer, isError, isLoading} = useSigner();
 	const [DRState, setDRState] = useState("");
 
 	return (<div className="mb-3">
@@ -229,7 +231,12 @@ function DepositReceiveSection() {
 				setDRState("receive");
 			}} disabled={DRState == "receive"}>
 				Receive
-			</PrimaryButton>	
+			</PrimaryButton>
+			<div className="col-span-2">
+				{signer && <div className={"mt-auto"}>
+                        <ConnectButton/>
+                </div>}
+			</div>	
 		</div>
 		<div className="pt-6">
 			{ 
@@ -324,8 +331,8 @@ export default function Content() {
 			removeAsset: removeAsset,
 			updateStatus: updateStatus
         }}>
-            {signer ? <div className="grid grid-cols-5 gap-8">
-                <div className="col-span-3">
+            {signer ? <div className="grid grid-cols-4 gap-8">
+                <div className="col-span-2">
 					<YourAssetsSection/>
 				</div>
                 <div className="col-span-2">
@@ -334,7 +341,6 @@ export default function Content() {
             </div> : <div className={"font-bold text-darkgreen text-2xl text-center h-full flex flex-col"}>
                 <div className={"my-auto flex flex-col gap-2 items-center"}>
                     <h1>Connect your wallet to be able to interact with Hurricane.</h1>
-                    <ConnectButton/>
                 </div>
             </div>}
         </SecretContext.Provider>

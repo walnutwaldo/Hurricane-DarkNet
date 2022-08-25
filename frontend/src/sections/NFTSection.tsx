@@ -19,7 +19,7 @@ export default function NFTSection() {
     console.log("network name", networkName);
 
     const [nfts, setNFTs] = useState([]);
-	const [loadingNFTs, setLoadingNFTs] = useState(false);
+	const [loadingNFTs, setLoadingNFTs] = useState(true);
 	const [nftStart, setNFTStart] = useState(0);
 	const [nftSel, setNFTSel] = useState(-1);
 

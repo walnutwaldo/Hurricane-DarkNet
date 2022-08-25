@@ -1,6 +1,5 @@
 import {BigNumber} from "ethers";
 import React from "react";
-
 export type Secret = {
     secret: BigNumber,
     shared: BigNumber,
@@ -15,6 +14,7 @@ type SecretContext = {
     removeAsset?: (idx: number) => void,
 	updateStatus?: (idx: number) => void,
 }
+
 
 const DEFAULT_CONTEXT = {
 	keys: [],
