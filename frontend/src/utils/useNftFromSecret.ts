@@ -24,7 +24,7 @@ export function useNftFromSecret(secret: {
             const pubKey = mimc(secret.secret, "0");
             contract.dataForPubkey(pubKey).then((maskedData: [BigNumber, BigNumber]) => {
                 const unmaskedData = unmaskTokenData(maskedData, secret);
-                const nft = new Contract(unmaskedData.tokenAddress.toHexString(), NFT_ABI, signer!);
+                const nft = new Contract(unmaskedData.tokenAddress, NFT_ABI, signer!);
                 setNftContract(nft);
                 nft.tokenURI(unmaskedData.tokenId).then((tokenURI: any) => {
                     fetch(tokenURI).then(res=>res.json()).then((res: any) => {

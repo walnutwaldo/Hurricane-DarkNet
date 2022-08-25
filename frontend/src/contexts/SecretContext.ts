@@ -128,8 +128,11 @@ export function unmaskTokenData(
     } & any
 ) {
     const [token, tokenId] = maskedData;
+    const tokenAsNumber = token.add(MODULUS).sub(secret.tokenMask).mod(MODULUS);
+    const tokenAsHex = tokenAsNumber.toHexString().substring(2);
+    const tokenAddress = "0x" + "0".repeat(40 - tokenAsHex.length) + tokenAsHex;
     return {
-        tokenAddress: token.add(MODULUS).sub(secret.tokenMask).mod(MODULUS),
+        tokenAddress,
         tokenId: tokenId.add(MODULUS).sub(secret.tokenIdMask).mod(MODULUS),
     }
 }

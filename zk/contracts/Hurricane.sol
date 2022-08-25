@@ -118,7 +118,7 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
     function calcLeaf(
         uint publicKey,
         IERC721 token,
-        uint256 tokenId,
+        uint tokenId,
         uint noise
     ) public view returns (uint leaf) {
         leaf = hashLeftRight(

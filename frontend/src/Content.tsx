@@ -31,6 +31,7 @@ function SecretDisplay(props: {
     const [refreshing, setRefreshing] = useState(false);
 
     async function refresh() {
+        if (!isAsset) return;
         setRefreshing(true);
         const leafIdx = BigNumber.from(await contract.leafForPubkey(secret.shared));
         if (leafIdx.isZero()) {
@@ -39,14 +40,14 @@ function SecretDisplay(props: {
         }
 
         const maskedData = await contract.dataForPubkey(secret.shared);
-        const { tokenAddress, tokenId } = unmaskTokenData(maskedData, secret);
+        const {tokenAddress, tokenId} = unmaskTokenData(maskedData, secret);
         const leaf = await contract.calcLeaf(
             secret.shared,
             tokenAddress,
             tokenId,
             secret.noise
         );
-        const isPaid =await contract.getLeaf(leafIdx) == leaf;
+        const isPaid = (await contract.getLeaf(leafIdx)).eq(leaf);
         if (isPaid) {
             updateStatus?.(idx);
         }
@@ -57,7 +58,7 @@ function SecretDisplay(props: {
         if (contract) {
             refresh();
         }
-    }, [contract])
+    }, [])
 
     return (
         <div className={"flex flex-row gap-3 text-white"}>
@@ -136,7 +137,8 @@ function YourAssetsSection() {
                                             <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
                                                 <div className="flex flex-row justify-between">
                                                     {/*<span className={"text-white"}></span>*/}
-                                                    <SecretDisplay secret={secret} idx={idx} contract={contract} isAsset={true}/>
+                                                    <SecretDisplay secret={secret} idx={idx} contract={contract}
+                                                                   isAsset={true}/>
                                                 </div>
                                             </div>
                                         )
@@ -157,7 +159,8 @@ function YourAssetsSection() {
                                             <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
                                                 <div className="flex flex-row justify-between">
                                                     {/*<span className={"text-white"}></span>*/}
-                                                    <SecretDisplay secret={secret} idx={idx} contract={contract} isAsset={false}/>
+                                                    <SecretDisplay secret={secret} idx={idx} contract={contract}
+                                                                   isAsset={false}/>
                                                 </div>
                                             </div>
                                         )
