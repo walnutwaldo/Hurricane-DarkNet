@@ -1,6 +1,6 @@
 // Setup: npm install alchemy-sdk
 // Github: https://github.com/alchemyplatform/alchemy-sdk-js
-import { Network, Alchemy } from "alchemy-sdk";
+import {Network, Alchemy} from "alchemy-sdk";
 import React from "react";
 import {useEffect, useState} from "react";
 import {useNetwork, useSigner} from "wagmi";
@@ -35,6 +35,16 @@ export default function NFTSection() {
     return (
         <div>
             NFTs
+            <div className={"flex flex-row gap-2"}>
+                {nfts.map((nft: any, idx: number) => {
+                    return (
+                        <div key={idx} className={"bg-darkgreen min-w-72 p-2 rounded-md text-lightgreen"}>
+                            <h4>{nft.title}</h4>
+                            <img alt={nft.title} src={nft.media[0].gateway} width={250}/>
+                        </div>
+                    )
+                })}
+            </div>
         </div>
     )
 }
