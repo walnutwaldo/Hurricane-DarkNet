@@ -1,6 +1,6 @@
 import React, {useContext, useReducer, useState} from 'react';
 import {BigNumber, Contract} from "ethers";
-import SecretContext, {Secret} from './contexts/SecretContext';
+import SecretContext,  {Secret} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
@@ -68,6 +68,7 @@ function AssetDisplay(props: any) {
     const {secret, idx} = props;
     
     const [enableSecretCopy, setEnableSecretCopy] = useState(true);
+    const [enableExporting, setEnableExporting] = useState(true);
 
     return (
         <div className={"flex flex-row gap-3 text-white"}>
@@ -76,18 +77,31 @@ function AssetDisplay(props: any) {
 			}}>
 				Delete
 			</AlertButton>
-			<label><b>Secret key:</b></label>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(secret.secret!.toHexString());
-                setEnableSecretCopy(false);
-                setTimeout(() => {
-                    setEnableSecretCopy(true);
-                }, 1000);
-            }} disabled={!enableSecretCopy}>
-                {enableSecretCopy ? "Copy" : "Copied!"}
-            </SecondaryButton>
+			<label><b>Your Asset Name</b></label>
+            <WithdrawSection idx={idx} rm={removeAsset}/>
+            <PrimaryButton onClick={() => {
+                // Remove the secret
+                console.log("i am the secret", secret);
+                setEnableExporting(!enableExporting);
+                if (enableExporting){
+                    navigator.clipboard.writeText(secret.secret!.toHexString());
+                }
+                return(<div></div>);
+            }} >
+                {enableExporting ? "Export Secret" : "Copy"}
+            </PrimaryButton>
+             {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                    { secret.toHexString().substr(0,10) +"..."}
+                </span> }
         </div>
+    )
+}
+export function DisplayExport(props:any){
+    const {secret} = props
+    return (
+        < span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+            {secret.toHexString().substr(0,10) + "..."}
+        </span>
     )
 }
 
@@ -324,6 +338,5 @@ export default function Content() {
                 </div>
             </div>}
         </SecretContext.Provider>
-
     );
 }

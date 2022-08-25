@@ -14,35 +14,32 @@ const MODULUS = BigNumber.from("218882428718392752222464057452572750885483644004
 
 export function DepositSection() {
     const {chain, chains} = useNetwork()
-
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
-
-    console.log("chain name", chain?.name);
-
-    const {data: signer, isError, isLoading} = useSigner()
-    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-
-	const shRef = useRef<HTMLInputElement>(null);
-
+    const secretContext = useContext(SecretContext);
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
+	const [depositErrMsg, setDepositErrMsg] = useState("");
 
-	const {addAsset} = useContext(SecretContext);
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    console.log("chain name", chain?.name);
+    const {data: signer, isError, isLoading} = useSigner()
+    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
+	const shRef = useRef<HTMLInputElement>(null);
 
     async function makeDeposit(currentShared: BigNumber ) {
         setIsDepositing(true);
         setIsPreparingTxn(true);
-        const leaf = currentShared;
-        const tx = await contract.deposit(leaf, {
+        setDepositErrMsg("");
+        const tx = await contract.deposit(currentShared, {
             value: ethers.utils.parseEther('0.1')
         }).catch((err: any) => {
             console.log(err);
             setIsDepositing(false);
             setIsPreparingTxn(false);
         });
+        console.log("finished sending tx in metamask");
         setIsPreparingTxn(false);
-
         const result = await tx.wait();
+        console.log("waited on tx");
         setIsDepositing(false);
     }
 
@@ -63,8 +60,8 @@ export function DepositSection() {
                 		const leaf = mimc(secret, "0");
                 		console.log(leaf, await contract.indexOfLeaf(leaf));
                         await makeDeposit(leaf);
-                		const isPaid = await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero()); // should be true
-		                addAsset!({
+                		const isPaid =await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero()); // should be true
+		                secretContext!.addAsset!({
     		                secret: secret,
         		            shared: leaf,
                 		});

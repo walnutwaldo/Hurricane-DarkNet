@@ -1,17 +1,21 @@
 import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
+import {PrimaryButton, SecondaryButton, AlertButton} from "../components/buttons";
 import {BigNumber, Contract, ethers} from "ethers";
-import {PrimaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
+const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-export function WithdrawSection() {
+export function WithdrawSection(props: any) {
+    const {idx, rm} = props
     const {chain, chains} = useNetwork()
+
+    const secretContext = useContext(SecretContext);
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
@@ -41,9 +45,6 @@ export function WithdrawSection() {
         const rootIdx = siblingsData.rootIdx;
 
         console.log(siblingsData);
-
-        // console.log("siblings", siblingsData);
-        // console.log("dir", dir);
         const input = {
             mimcK: "0",
             receiver: await signer!.getAddress(),
@@ -61,7 +62,7 @@ export function WithdrawSection() {
         console.log("publicSignals", publicSignals);
     }
 
-    const withdrawArgs = (proof && publicSignals) ? [
+    const withdrawArgs = (proof && publicSignals && rootIdx) ? [
         [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
         [
             [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
@@ -69,6 +70,7 @@ export function WithdrawSection() {
         ],
         [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
         publicSignals.map((s) => BigNumber.from(s)),
+		BigNumber.from(rootIdx),
     ] : [];
 
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -79,75 +81,50 @@ export function WithdrawSection() {
         setIsWithdrawing(true);
 
         setIsPreparingTxn(true);
-        const tx = await contract.withdraw(
-            ...withdrawArgs,
-            rootIdx
-        ).catch((err: any) => {
+		console.log(...withdrawArgs);
+        const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
             setIsWithdrawing(false);
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
-        const result = await tx.wait();
+        let result = await tx.wait(); // dis    
         setIsWithdrawing(false);
         setProof(undefined);
     }
 
     return (
-        <div className={"mb-3"}>
-            <h3 className={"text-lg text-black font-bold"}>
-                WITHDRAW
+        <div className={""}>
+            <h3 className={"text-lg text-white font-bold"}>
             </h3>
+            <PrimaryButton type="submit" onClick={() => {
+                setWithdrawErrMsg("");
+                let currentSecret = BigNumber.from("0");
+                try {
+                    console.log(BigNumber.from(secretContext!.assets[idx].secret));
+                    console.log(BigNumber.from("2").pow(BigNumber.from("500")));
+                    console.log(MODULUS);
+                    currentSecret = BigNumber.from(secretContext!.assets[idx].secret);
+                } catch (err) {
+                    setWithdrawErrMsg("Use an actual number for the secret!");
+                    return;
+                }
+                if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                    setWithdrawErrMsg("Secret out of bounds");
+                    return;
+                }
+                setGeneratingProof(true);
+                runProof(currentSecret).then(() => {
+                    setGeneratingProof(false);
+                	makeWithdrawal();
+                })
+                }} disabled={generatingProof}>
+                    {isWithdrawing ? "Withdrawing" : "Withdraw"}
+                    {generatingProof ? "Generating Proof": ""}
+                    { isPreparingTxn ? "Preparing Transaction" :""}
+            </PrimaryButton>
             <div>
-                <label>Secret:</label>
-                <input type="text" name="secretTextbox" ref={sRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                <div className="flex flex-row gap-2">
-                    <PrimaryButton type="submit" onClick={() => {
-                        setWithdrawErrMsg("");
-                        let currentSecret = BigNumber.from("0");
-                        try {
-                            currentSecret = BigNumber.from(sRef.current!.value);
-                        } catch (err) {
-                            setWithdrawErrMsg("Use an actual number for the secret!");
-                            return;
-                        }
-                        if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setWithdrawErrMsg("Secret out of bounds");
-                            return;
-                        }
-                        setGeneratingProof(true);
-                        runProof(currentSecret).then(() => {
-                            setGeneratingProof(false);
-                        })
-                    }} disabled={generatingProof}>
-                        Generate Proof
-                    </PrimaryButton>
-                    {proof &&
-                        (<>
-                                <PrimaryButton onClick={() => {
-                                    makeWithdrawal();
-                                }} disabled={isWithdrawing}>
-                                    {
-                                        isWithdrawing ?
-                                            <span>Withdrawing <InlineLoader/></span> : "Withdraw 0.1 ETH"
-                                    }
-                                </PrimaryButton>
-                                {isWithdrawing && (
-                                    isPreparingTxn ? (
-                                        <span>
-                                            Preparing transaction <InlineLoader/>
-                                        </span>
-                                    ) : (
-                                        <span>
-                                            Withdrawing <InlineLoader/>
-                                        </span>
-                                    )
-                                )}
-                            </>
-                        )
-                    }
                 </div>
                 <div className={"text-red-500"}>{withdrawErrMsg}</div>
                 <div>
@@ -170,6 +147,5 @@ export function WithdrawSection() {
                     }
                 </div>
             </div>
-        </div>
     )
 }

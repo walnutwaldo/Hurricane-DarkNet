@@ -14,11 +14,11 @@ export function PrimaryButton(props: any) {
 }
 
 export function SecondaryButton(props: any) {
-    const {onClick, children, disabled} = props;
+    const {onClick, children, disabled, className} = props;
 
     return (
         <button className={
-            "outline-none bg-zinc-400 disabled:opacity-50 text-white rounded-md px-1 transition" +
+            className + " outline-none bg-zinc-400 disabled:opacity-50 text-white rounded-md px-1 transition" +
             " enabled:hover:scale-105 font-bold"
         } onClick={onClick} disabled={disabled}>
             {children}
