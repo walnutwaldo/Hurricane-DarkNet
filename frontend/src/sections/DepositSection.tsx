@@ -55,7 +55,7 @@ export function DepositSection() {
     }
 
     return (
-        <div className={"mb-3"}>
+        <div>
             <h3 className={"text-lg text-black font-bold"}>
                 DEPOSIT
             </h3>

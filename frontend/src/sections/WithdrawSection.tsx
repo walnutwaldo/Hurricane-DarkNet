@@ -6,6 +6,7 @@ import {BigNumber, Contract, ethers} from "ethers";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
+import { text } from "node:stream/consumers";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -57,29 +58,22 @@ export function WithdrawSection(props: any) {
         setPublicSignals(publicSignals);
         console.log("publicSignals", publicSignals);
     }
-
-    const withdrawArgs = (proof && publicSignals) ? [
-        [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
-        [
-            [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
-            [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
-        ],
-        [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-        publicSignals.map((s) => BigNumber.from(s)),
-    ] : [];
-
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeWithdrawal() {
         setIsWithdrawing(true);
-
         setIsPreparingTxn(true);
-        console.log(await contract.merkleRoot());
-        console.log("proof", proof);
-        console.log("public signals", publicSignals);
-        console.log("hhhahhahh" ,...withdrawArgs);
+        const withdrawArgs = (proof && publicSignals) ? [
+            [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
+            [
+                [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
+                [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
+            ],
+            [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
+            publicSignals.map((s) => BigNumber.from(s)),
+        ] : [];
         const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
@@ -90,6 +84,7 @@ export function WithdrawSection(props: any) {
         let result = await tx.wait(); // dis    
         setIsWithdrawing(false);
         setProof(undefined);
+        rm!(idx);
     }
 
     return (
@@ -100,15 +95,8 @@ export function WithdrawSection(props: any) {
                 setWithdrawErrMsg("");
                 let currentSecret = BigNumber.from("0");
                 try {
-                    console.log(BigNumber.from(secretContext!.secrets[idx].secret));
-                    console.log(BigNumber.from("2").pow(BigNumber.from("500")));
-                    console.log(MODULUS);
-                    console.log("currentSecret");
                     currentSecret = BigNumber.from(secretContext!.secrets[idx].secret);
-                    console.log("leaf", secretContext.secrets[idx].secret);
-                    console.log(currentSecret);
                 } catch (err) {
-                    console.log("im sad");
                     setWithdrawErrMsg("Use an actual number for the secret!");
                     return;
                 }
@@ -119,13 +107,11 @@ export function WithdrawSection(props: any) {
                 setGeneratingProof(true);
                 runProof(currentSecret).then(() => {
                     setGeneratingProof(false);
-                    
+                    makeWithdrawal();
                 })
-                makeWithdrawal();
+                
                 }} disabled={generatingProof}>
                     {isWithdrawing ? "Withdrawing" : "Withdraw"}
-                    {generatingProof ? "Generating Proof": ""}
-                    { isPreparingTxn ? "Preparing Transaction" :""}
                 
             </PrimaryButton>
             <div>

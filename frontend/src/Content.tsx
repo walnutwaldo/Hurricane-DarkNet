@@ -22,6 +22,7 @@ function AssetDisplay(props: any) {
         <div className={"flex flex-row gap-3 text-white"}>
 			<label><b>Your Asset Name</b></label>
             <WithdrawSection idx={idx} rm = {rm}/>
+            <TransferSection idx={idx} rm = {rm}/>
             <PrimaryButton onClick={() => {
                 // Remove the secret
                 console.log("i am the secret", secret);
@@ -118,9 +119,11 @@ export default function Content() {
             addSecret: addSecret,
             removeSecret: removeSecret,
         }}>
-            {signer ? <div className="grid grid-cols- gap-8">
-                <YourAssetsSection/>
+            {signer ? <div className="grid grid-cols-2 gap-8">
+                <div><YourAssetsSection/></div>
+                
                 <div>
+                    
                     <DepositSection/> 
                 </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
