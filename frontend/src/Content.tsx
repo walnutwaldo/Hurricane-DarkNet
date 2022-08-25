@@ -1,6 +1,6 @@
 import React, {useContext, useReducer, useState} from 'react';
 import {BigNumber, Contract} from "ethers";
-import SecretContext, {Secret} from './contexts/SecretContext';
+import SecretContext,  {Secret} from './contexts/SecretContext';
 import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
@@ -8,57 +8,43 @@ import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "./contracts/de
 import {useSigner, useNetwork} from "wagmi";
 import mimc from "./crypto/mimc";
 import {TransferSection} from "./sections/TransferSection";
+import { rm } from 'fs';
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-function SecretDisplay(props: any) {
+function AssetDisplay(props: any) {
     
-    const {secret, shared, idx, rm, isPaid} = props;
+    const {secret, shared, idx, rm} = props;
     
-    const [enableSecretCopy, setEnableSecretCopy] = useState(true);
-	const [enableSharedCopy, setEnableSharedCopy] = useState(true);
+    const [enableExporting, setEnableExporting] = useState(true);
     const [enableIsPaidCopy, setEnableIsPaidCopy] = useState(true);
     return (
         <div className={"flex flex-row gap-3 text-white"}>
-			<AlertButton onClick={() => {
-					// Delete secret
-					rm!(idx);
-			}}>
-				Delete
-			</AlertButton>
-			<label><b>Shared key:</b></label>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(shared!.toHexString());
-                setEnableSharedCopy(false);
-                setTimeout(() => {
-                    setEnableSharedCopy(true);
-                }, 1000);
-            }} disabled={!enableSharedCopy}>
-                {enableSharedCopy ? "Copy" : "Copied!"}
-            </SecondaryButton>
-            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                {shared.toHexString().substr(0,10) + "..."}
-            </span>
-			<label><b>Secret key:</b></label>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(secret!.toHexString());
-                setEnableSecretCopy(false);
-                setTimeout(() => {
-                    setEnableSecretCopy(true);
-                }, 1000);
-            }} disabled={!enableSecretCopy}>
-                {enableSecretCopy ? "Copy" : "Copied!"}
-            </SecondaryButton>
-            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                {secret.toHexString().substr(0,10) + "..."}
-            </span>
-            <label><b>Used?:</b></label>
-            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                {isPaid ? "YES" : "NO"}
-            </span>
+			<label><b>Your Asset Name</b></label>
+            <WithdrawSection idx={idx} rm = {rm}/>
+            <PrimaryButton onClick={() => {
+                // Remove the secret
+                console.log("i am the secret", secret);
+                setEnableExporting(!enableExporting);
+                if (enableExporting){
+                    navigator.clipboard.writeText(shared!.toHexString());
+                }
+                return(<div></div>);
+            }} >
+                {enableExporting ? "Export Secret" : "Copy"}
+            </PrimaryButton>
+             {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+                    { secret.toHexString().substr(0,10) +"..."}
+                </span> }
         </div>
+    )
+}
+export function DisplayExport(props:any){
+    const {secret} = props
+    return (
+        < span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+            {secret.toHexString().substr(0,10) + "..."}
+        </span>
     )
 }
 
@@ -74,10 +60,11 @@ function YourAssetsSection() {
                 {
                     secrets.map(function (secret, idx) {
                         return (
+                            
                             <div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
                                 <div className="flex flex-row justify-between">
                                     {/*<span className={"text-white"}></span>*/}
-                                    <SecretDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret} isPaid = {secret.isPaid}/>
+                                    <AssetDisplay secret={secret.secret} shared={secret.shared} idx={idx} rm={removeSecret}/>
                                 </div>
                             </div>
                         )
@@ -88,40 +75,7 @@ function YourAssetsSection() {
     )
 }
 
-function GenerateSecretSection() {
-    const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
-    const {data: signer} = useSigner()
-    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-    
-    const {secrets, addSecret, removeSecret} = useContext(SecretContext);
-    const [enableCopy, setEnableCopy] = useState(true);
-
-    return (<div className={"mb-3"}>
-        <h3 className={"text-lg text-black font-bold"}>
-            GENERATE A SECRET
-        </h3>
-        <div className="flex flex-row gap-2">
-            <PrimaryButton onClick={async () => {
-				console.log("Generating");
-                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
-                // Concatenate into hex string
-                const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
-                const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
-				const leaf = mimc(secret, "0");
-                const isPaid = true// (await contract.indexOfLeaf(mimc(secret, "0", 91))).eq(0);
-                addSecret!({
-					secret: secret,
-					shared: leaf,
-                    isPaid: isPaid
-				});
-			}}>
-                Generate 
-            </PrimaryButton>
-        </div>
-    </div>)
-}
 
 const SECRETS_LOCALHOST_KEY = 'hurricane_secrets';
 
@@ -133,7 +87,6 @@ export default function Content() {
         JSON.parse(localStorage.getItem(SECRETS_LOCALHOST_KEY) || '[]').map((secretJson: any) => ({
             secret: BigNumber.from(secretJson.secret),
             shared: BigNumber.from(secretJson.shared),
-            isPaid: secretJson.isPaid
         }))
     );
 
@@ -142,7 +95,6 @@ export default function Content() {
             newSecrets.map((secret) => ({
                 secret: secret.secret.toString(),
                 shared: secret.shared.toString(),
-                isPaid: secret.isPaid
             }))
         ));
     }
@@ -166,18 +118,15 @@ export default function Content() {
             addSecret: addSecret,
             removeSecret: removeSecret,
         }}>
-            {signer ? <div className="grid grid-cols-2 gap-8">
+            {signer ? <div className="grid grid-cols- gap-8">
                 <YourAssetsSection/>
                 <div>
-                    <GenerateSecretSection/>
-                    <DepositSection/>
-                    <WithdrawSection/>
-                    <TransferSection/>
+                    <DepositSection/> 
                 </div>
             </div> : <div className={"font-bold text-red-500 text-2xl text-center"}>
                 Connect your wallet to be able to interact with Hurricane.
             </div>}
         </SecretContext.Provider>
-
+        
     );
 }
