@@ -25,7 +25,7 @@ contract Hurricane is ReentrancyGuard, Verifier {
 
     constructor(IHasher _hasher) public {
         hasher = _hasher;
-		merkleTree[0].push(0);
+        merkleTree[0].push(0);
     }
 
     function numLeaves() public view returns (uint) {

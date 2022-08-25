@@ -9,9 +9,6 @@ async function main() {
     const hasherContract = await Hasher.deploy();
     console.log(`Deployed Hasher at ${hasherContract.address}`);
 
-    const testval = await hasherContract.MiMCSponge(0, 0, 0);
-    console.log(`testval: ${testval}`);
-
     const Hurricane = await ethers.getContractFactory("Hurricane");
     const contract = await Hurricane.deploy(hasherContract.address);
 
