@@ -38,3 +38,30 @@ export function AlertButton(props: any) {
         </button>
     )
 }
+
+export function NFTButtonActive(props: any) {
+    const {onClick, children, disabled} = props;
+
+    return (
+        <button className={
+            "outline-none enabled:bg-darkgreen text-lightgreen rounded-md p-2 transition" +
+            " enabled:hover:scale-105 font-bold disabled:opacity-75"
+        } onClick={onClick} disabled={disabled}>
+            {children}
+        </button>
+    )
+}
+
+export function NFTButtonInactive(props: any) {
+    const {onClick, children, disabled} = props;
+
+    return (
+        <button className={
+            "outline-none bg-darkgreen text-lightgreen rounded-md p-2 transition" +
+            " enabled:hover:scale-105 font-bold enabled:opacity-75"
+        } onClick={onClick} disabled={disabled}>
+            {children}
+        </button>
+    )
+}
+

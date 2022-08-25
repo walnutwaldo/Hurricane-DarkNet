@@ -79,6 +79,7 @@ function AssetDisplay(props: any) {
 			</AlertButton>
 			<label><b>Your Asset Name</b></label>
             <WithdrawSection idx={idx} rm={removeAsset}/>
+            <TransferSection idx={idx} rm={removeAsset}/>
             <PrimaryButton onClick={() => {
                 // Remove the secret
                 console.log("i am the secret", secret);
@@ -90,12 +91,13 @@ function AssetDisplay(props: any) {
             }} >
                 {enableExporting ? "Export Secret" : "Copy"}
             </PrimaryButton>
-             {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                    { secret.toHexString().substr(0,10) +"..."}
-                </span> }
+            {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+             	{ secret.secret!.toHexString().substr(0,10) +"..."}
+            </span> }
         </div>
     )
 }
+
 export function DisplayExport(props:any){
     const {secret} = props
     return (
@@ -328,8 +330,6 @@ export default function Content() {
 				</div>
                 <div className="col-span-2">
 					<DepositReceiveSection/>
-                    <WithdrawSection/>
-                    <TransferSection/>
                 </div>
             </div> : <div className={"font-bold text-darkgreen text-2xl text-center h-full flex flex-col"}>
                 <div className={"my-auto flex flex-col gap-2 items-center"}>

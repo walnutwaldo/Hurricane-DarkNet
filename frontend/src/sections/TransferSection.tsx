@@ -2,7 +2,7 @@ import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
 import {useContractRead, useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract, ethers} from "ethers";
-import {PrimaryButton} from "../components/buttons";
+import {PrimaryButton, SecondaryButton} from "../components/buttons";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
@@ -10,8 +10,10 @@ import InlineLoader from "../components/InlineLoader";
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
 
-export function TransferSection() {
-    const {chain, chains} = useNetwork()
+export function TransferSection(props: any) {
+    const {idx, rm} = props
+    const {chain, chains} = useNetwork();
+    const secretContext = useContext(SecretContext);
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
@@ -35,7 +37,9 @@ export function TransferSection() {
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
     async function runProof(currentSecret: BigNumber, receiverShared: BigNumber) {
+        console.log("running proof");
         const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0", 91)));
+        console.log("running proof");
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
@@ -88,95 +92,75 @@ export function TransferSection() {
             setIsTransferring(false);
             setIsPreparingTxn(false);
         });
+        console.log("transfer pending");
         setIsPreparingTxn(false);
         const result = await tx.wait();
+        console.log("transfer success");
         setIsTransferring(false);
         setProof(undefined);
     }
 
     return (
-        <div className={"mb-3"}>
+        <div >
             <h3 className={"text-lg text-black font-bold"}>
-                TRANSFER
             </h3>
             <div>
-                <label>Your secret:</label>
-                <input type="text" name="secretTextbox" ref={sRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-
-                <label>Receiver's shared key:</label>
-                <input type="text" name="sharedTextbox" ref={shRef}
-                       className={"ml-1 rounded-md outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                
+            {isTransferring && (
+                            <div>
+                                <label>Receiver's shared key:</label>
+                                <input type="text" name="sharedTextbox" ref={shRef}
+                                     className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                              <SecondaryButton type="submit" onClick={() => {
+                                setIsTransferring(false);
+                              }}>
+                                Cancel
+                              </SecondaryButton>
+                              </div>  
+                              )}
                 <div className={"text-red-500"}>{transferErrMsg}</div>
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        setTransferErrMsg("");
-                        let currentSecret = BigNumber.from("0");
-                        try {
-                            currentSecret = BigNumber.from(sRef.current!.value);
-                        } catch (err) {
-                            setTransferErrMsg("Use an actual number for the secret!");
-                            return;
+                        if (isTransferring){
+                            setTransferErrMsg("");
+                            let currentSecret = BigNumber.from("0");
+                            try {
+                                currentSecret = BigNumber.from(secretContext!.assets[idx].secret);
+                                console.log(currentSecret);
+                            } catch (err) {
+                                setTransferErrMsg("Use an actual number for the secret!");
+                                return;
+                            }
+                            if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                                setTransferErrMsg("Secret out of bounds");
+                                return;
+                            }
+                            setGeneratingProof(true);
+                            let receiverShared = BigNumber.from("0");
+                            try {
+                                receiverShared = BigNumber.from(shRef.current!.value);
+                                console.log(receiverShared);
+                            } catch (err) {
+                                setTransferErrMsg("Use an actual number for the secret!");
+                                return;
+                            }
+                            if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
+                                setTransferErrMsg("Secret out of bounds");
+                                return;
+                            }
+                            runProof(currentSecret, receiverShared).then(() => {
+                                setGeneratingProof(false);
+                                makeTransfer(receiverShared);
+                            })
                         }
-                        if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setTransferErrMsg("Secret out of bounds");
-                            return;
+                        else{
+                            setIsTransferring(true);
                         }
-                        setGeneratingProof(true);
-                        let receiverShared = BigNumber.from("0");
-                        try {
-                            receiverShared = BigNumber.from(shRef.current!.value);
-                        } catch (err) {
-                            setTransferErrMsg("Use an actual number for the secret!");
-                            return;
-                        }
-                        if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                            setTransferErrMsg("Secret out of bounds");
-                            return;
-                        }
-                        runProof(currentSecret, receiverShared).then(() => {
-                            setGeneratingProof(false);
-                        })
-                    }} disabled={generatingProof}>
-                        Generate Proof
+                    }} disabled = {generatingProof}>
+                        Transfer
                     </PrimaryButton>
-                    {proof &&
-                        (<>
-                                <PrimaryButton onClick={() => {
-                                    let receiverShared = BigNumber.from("0");
-                                    try {
-                                        receiverShared = BigNumber.from(shRef.current!.value);
-                                    } catch (err) {
-                                        setTransferErrMsg("Use an actual number for the secret!");
-                                        return;
-                                    }
-                                    if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                                        setTransferErrMsg("Secret out of bounds");
-                                        return;
-                                    }
-                                    makeTransfer(receiverShared).then();
-                                }} disabled={isTransferring}>
-                                    {
-                                        isTransferring ?
-                                            <span>Transferring <InlineLoader/></span> : "Transfer 0.1 ETH"
-                                    }
-                                </PrimaryButton>
-                                {isTransferring && (isPreparingTxn ? (
-                                    <span>
-                                        Preparing transaction <InlineLoader/>
-                                    </span>
-                                ) : (
-                                    <span>
-                                        Transferring <InlineLoader/>
-                                    </span>
-                                ))}
-                            </>
-                        )
-                    }
+                    
                 </div>
-                
                 <div>
                     {
                         generatingProof ? (
