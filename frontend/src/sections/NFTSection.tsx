@@ -7,6 +7,7 @@ import {useNetwork, useSigner} from "wagmi";
 import InlineLoaderFast from "../components/InlineLoaderFast";
 import {PrimaryButton} from "../components/buttons";
 import {NFTDisplay} from "../components/NFTDisplay";
+import {NFT_ADDRESS_HARDCODED, NFT_ID_HARDCODED} from "../contracts/deployInfo";
 
 const NETWORK_TO_CHAIN = {
     'goerli': Network.ETH_GOERLI,
@@ -25,21 +26,41 @@ export default function NFTSection(props: any) {
     const [nftStart, setNFTStart] = useState(0);
 
     useEffect(() => {
-        setLoadingNFTs(true);
-        setNFTs([]);
-        if (signer && networkName && NETWORK_TO_CHAIN[networkName]) {
-            const settings = {
-                apiKey: process.env.ALCHEMY_KEY,
-                network: NETWORK_TO_CHAIN[networkName]
-            };
-            const alchemy = new Alchemy(settings);
+        if (signer && networkName) {
+            setNFTs([]);
+            setLoadingNFTs(true);
+            if (NETWORK_TO_CHAIN[networkName]) {
+                const settings = {
+                    apiKey: process.env.ALCHEMY_KEY,
+                    network: NETWORK_TO_CHAIN[networkName]
+                };
+                const alchemy = new Alchemy(settings);
 
-            // Print all NFTs returned in the response:
-            signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
-                setNFTs(res.ownedNfts);
-                console.log(res);
-                setLoadingNFTs(false);
-            }));
+                // Print all NFTs returned in the response:
+                signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
+                    setNFTs(res.ownedNfts);
+                    console.log(res);
+                    setLoadingNFTs(false);
+                }));
+            } else {
+                const arr = [];
+                for (let i = 0; i < 5; i++) {
+                    arr.push({
+                        tokenId: i.toString(),
+                        contract: {
+                            address: NFT_ADDRESS_HARDCODED
+                        },
+                        title: "Fake Azuki #" + i,
+                        media: [
+                            {
+                                gateway: `https://ikzttp.mypinata.cloud/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/${i}.png`
+                            }
+                        ]
+                    })
+                }
+                setNFTs(arr);
+            }
+            setLoadingNFTs(false);
         }
     }, [signer, networkName]);
 
@@ -80,7 +101,7 @@ export default function NFTSection(props: any) {
                                 className={
                                     "rounded-md" +
                                     " " +
-                                    (nftIdx === nftStart + idx ? "border-lightgreen scale-105" : "hover:scale-105") +
+                                    (nftIdx === nftStart + idx ? "border-lightgreen shadow-md" : "hover:scale-105") +
                                     " " +
                                     (nftIdx !== -1 && (nftIdx !== nftStart + idx) && "opacity-75")
                                 }

@@ -9,6 +9,7 @@ import {TransferSection} from "./sections/TransferSection";
 import {GenerateSecretSection} from "./sections/GenSecretSection";
 import {ConnectButton} from '@rainbow-me/rainbowkit';
 import {AlertButton, PrimaryButton} from "./components/buttons";
+import {useNftFromSecret} from "./utils/useNftFromSecret";
 
 function AssetDisplay(props: any) {
     const {removeAsset, updateStatus} = useContext(SecretContext);
@@ -18,6 +19,8 @@ function AssetDisplay(props: any) {
     const [enableSecretCopy, setEnableSecretCopy] = useState(true);
     const [enableExporting, setEnableExporting] = useState(true);
 
+    const [nftContract, nftInfo] = useNftFromSecret(secret);
+
     return (
         <div className={"flex flex-row gap-3 text-white"}>
 			<AlertButton onClick={() => {
@@ -25,7 +28,7 @@ function AssetDisplay(props: any) {
 			}}>
 				Delete
 			</AlertButton>
-			<label><b>Your Asset Name</b></label>
+			<label><b>{nftInfo?.name || "unknown"}</b></label>
             <WithdrawSection idx={idx} rm={removeAsset}/>
             <TransferSection idx={idx} rm={removeAsset}/>
             <PrimaryButton onClick={() => {
@@ -74,7 +77,7 @@ function YourAssetsSection() {
                 		{
                     		assets.map(function (secret, idx) {
                         		return (
-                            		<div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
+                            		<div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg"}>
                                			<div className="flex flex-row justify-between">
                                    			{/*<span className={"text-white"}></span>*/}
                                    			<AssetDisplay secret={secret} idx={idx}/>

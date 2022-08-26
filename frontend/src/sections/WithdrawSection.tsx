@@ -86,29 +86,43 @@ export function WithdrawSection(props: any) {
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
-        console.log("publicSignals", publicSignals);
+
+        const res = {
+            proof: proof,
+            publicSignals: publicSignals,
+            rootIdx: rootIdx
+        }
+        console.log("proof res", res);
+
+        return res;
     }
 
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
-    const withdrawArgs = (proof && publicSignals && rootIdx) ? [
-        [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
-        [
-            [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
-            [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
-        ],
-        [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-        publicSignals.map((s) => BigNumber.from(s)),
-        BigNumber.from(rootIdx),
-    ] : [];
+    async function makeWithdrawal(proofRes: any) {
+        const {
+            proof,
+            publicSignals,
+            rootIdx
+        } = proofRes;
 
-    async function makeWithdrawal() {
         setIsWithdrawing(true);
         setIsPreparingTxn(true);
+
+        const proofArgs = (proof && publicSignals && rootIdx) ? [
+            [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
+            [
+                [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
+                [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
+            ],
+            [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
+            publicSignals.map((s: string) => BigNumber.from(s))
+        ] : [];
+
         const tx = await contract.withdraw(
-            ...withdrawArgs,
+            ...proofArgs,
             rootIdx,
         ).catch((err: any) => {
             console.log(err);
@@ -117,7 +131,10 @@ export function WithdrawSection(props: any) {
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
-        let result = await tx.wait(); // dis    
+        let result = await tx.wait(); // dis
+        if (!result?.status) {
+            setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
+        }
         setIsWithdrawing(false);
         setProof(undefined);
         rm!(idx);
@@ -130,13 +147,13 @@ export function WithdrawSection(props: any) {
             <PrimaryButton type="submit" onClick={() => {
                 setWithdrawErrMsg("");
                 setGeneratingProof(true);
-                runProof(currentSecret).then(() => {
+                runProof(currentSecret).then((proofRes) => {
                     setGeneratingProof(false);
-                    makeWithdrawal();
+                    makeWithdrawal(proofRes).then();
                 })
                 
-                }} disabled={generatingProof}>
-                    {isWithdrawing ? "Withdrawing" : "Withdraw"}
+                }} disabled={generatingProof || isWithdrawing}>
+                {isWithdrawing ? <span>Withdrawing<InlineLoader/></span> : "Withdraw"}
             </PrimaryButton>
             <div>
                 </div>

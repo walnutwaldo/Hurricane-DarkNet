@@ -63,7 +63,8 @@ export function TransferSection(props: any) {
             tokenIdMask: BigNumber
         }
     ) {
-        const leafIdx = await contract.leafForPubkey(mimc(currentSecret.secret, "0", 91));
+        const leaf = mimc(currentSecret.secret, "0");
+        const leafIdx = await contract.leafForPubkey(leaf);
         const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
@@ -88,24 +89,25 @@ export function TransferSection(props: any) {
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
-        console.log("publicSignals", publicSignals);
+
+        const res = {
+            proof,
+            publicSignals,
+            rootIdx
+        }
+
+        console.log("proofRes", res);
+
+        return res;
     }
 
-    const transferProofArgs = (proof && publicSignals) ? [
-        [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
-        [
-            [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
-            [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
-        ],
-        [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-        publicSignals.map((s) => BigNumber.from(s)),
-    ] : [];
-
+    const [expanded, setIsExpanded] = useState(false);
     const [isTransferring, setIsTransferring] = useState(false);
     const [transferErrMsg, setTransferErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeTransfer(
+        proofRes: any,
         shared: {
             shared: BigNumber,
             noise: BigNumber
@@ -115,9 +117,25 @@ export function TransferSection(props: any) {
     ) {
         setIsTransferring(true);
         setIsPreparingTxn(true);
+
+        const {
+            proof: currProof,
+            publicSignals: currSignals,
+            rootIdx: currRootIdx
+        } = proofRes;
+        const transferProofArgs = (currProof && currSignals) ? [
+            [BigNumber.from(currProof.pi_a[0]), BigNumber.from(currProof.pi_a[1])],
+            [
+                [BigNumber.from(currProof.pi_b[0][1]), BigNumber.from(currProof.pi_b[0][0])],
+                [BigNumber.from(currProof.pi_b[1][1]), BigNumber.from(currProof.pi_b[1][0])]
+            ],
+            [BigNumber.from(currProof.pi_c[0]), BigNumber.from(currProof.pi_c[1])],
+            currSignals.map((s: string) => BigNumber.from(s)),
+        ] : [];
+
         const tx = await contract.transfer(
             ...transferProofArgs,
-            rootIdx,
+            currRootIdx,
             maskTokenData(
                 NFT_ADDRESS_HARDCODED,
                 NFT_ID_HARDCODED,
@@ -132,7 +150,7 @@ export function TransferSection(props: any) {
         console.log("transfer pending");
         setIsPreparingTxn(false);
         const result = await tx.wait();
-        if (!result.status) {
+        if (!result?.status) {
             setTransferErrMsg("Transfer failed (possibly secret already taken)");
         } else {
             console.log("transfer success");
@@ -146,11 +164,16 @@ export function TransferSection(props: any) {
             <h3 className={"text-lg text-black font-bold"}>
             </h3>
             <div>
-                {isTransferring && (
+                {expanded && (
                     <div>
                         <label>Receiver's shared key:</label>
-                        <input type="text" name="sharedTextbox" ref={shRef}
-                               className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}/><br/>
+                        <input
+                            type="text"
+                            name="sharedTextbox"
+                            ref={shRef}
+                            className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
+                            onChange={updateShared}
+                        /><br/>
                         <SecondaryButton
                             type="submit"
                             onClick={() => {
@@ -165,17 +188,18 @@ export function TransferSection(props: any) {
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        if (isTransferring) {
+                        if (expanded && receiverShared) {
                             setTransferErrMsg("");
                             setGeneratingProof(true);
-                            runProof(receiverShared).then(() => {
+                            runProof(receiverShared).then((proofRes) => {
                                 setGeneratingProof(false);
-                                makeTransfer(receiverShared).then();
+                                makeTransfer(proofRes, receiverShared).then();
+                                setIsExpanded(false);
                             })
                         } else {
-                            setIsTransferring(true);
+                            setIsExpanded(true);
                         }
-                    }} disabled={generatingProof}>
+                    }} disabled={expanded && (generatingProof || !receiverShared || isTransferring)}>
                         Transfer
                     </PrimaryButton>
 

@@ -3,7 +3,12 @@ import SecretContext, {generateSecret, maskTokenData, Secret} from "../contexts/
 import {useNetwork, useSigner} from "wagmi";
 import {BigNumber, Contract} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES, NFT_ABI} from "../contracts/deployInfo";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES,
+    NFT_ABI,
+    NFT_ADDRESS_HARDCODED, NFT_ID_HARDCODED
+} from "../contracts/deployInfo";
 import InlineLoader from "../components/InlineLoader";
 import NFTSection from "./NFTSection";
 
@@ -19,6 +24,7 @@ export function DepositSection() {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
     const shRef = useRef<HTMLInputElement>(null);
 
+    const [isApproving, setIsApproving] = useState(false);
     const [isDepositing, setIsDepositing] = useState(false);
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
     const [depositErrMsg, setDepositErrMsg] = useState("");
@@ -47,17 +53,20 @@ export function DepositSection() {
 
     async function approveNFT() {
         if (!nft) return;
-        const approvalTx = await nftContract!.approve(contractAddress, nftId);
+        setIsApproving(true);
+        const approvalTx = await nftContract!.approve(contractAddress, nftId).catch(console.log);
         console.log("approval tx", approvalTx);
-        const approveResult = await approvalTx.wait();
-        console.log("approval result", approveResult);
+        if (approvalTx) {
+            const approveResult = await approvalTx.wait().catch(console.log);
+            console.log("approval result", approveResult);
 
-        if (!approveResult.status) {
-            setDepositErrMsg("Approval failed");
-            return;
-        } else {
-            setIsApproved(true);
+            if (!approveResult?.status) {
+                setDepositErrMsg("Approval failed");
+            } else {
+                setIsApproved(true);
+            }
         }
+        setIsApproving(false);
     }
 
     async function makeDeposit(
@@ -79,16 +88,23 @@ export function DepositSection() {
                 tokenId,
                 secret
             ),
-            secret.noise
+            secret.noise,
+            {
+                gasLimit: 10000000
+            }
         ).catch((err: any) => {
-            console.log(err);
+            console.log("txErr", err);
             setIsDepositing(false);
             setIsPreparingTxn(false);
         });
         console.log("deposit tx:", tx);
         setIsPreparingTxn(false);
-        const result = await tx.wait();
-        if (!result.status) {
+        const result = await tx.wait().catch((resErr: any) => {
+            console.log("txWaitErr", resErr);
+            setIsDepositing(false);
+            setDepositErrMsg("Deposit failed");
+        });
+        if (!result?.status) {
             setDepositErrMsg("Deposit failed");
         }
         console.log("deposit result:", result);
@@ -114,18 +130,26 @@ export function DepositSection() {
                         } else {
                             approveNFT();
                         }
-                    }} disabled={isDepositing || nftIdx === -1}>
+                    }} disabled={isDepositing || isApproving || nftIdx === -1}>
                         {nft ? (isApproved ? "Deposit " : "Approve ") + ` ${nft.title}` : 'Select an NFT'}
                     </PrimaryButton>
-                    {isDepositing && (isPreparingTxn ? (
-                        <span>
-                            Preparing transaction <InlineLoader/>
-                        </span>
-                    ) : (
-                        <span>
-                            Depositing <InlineLoader/>
-                        </span>
-                    ))}
+                    <span className={"text-lightgreen"}>
+                        {isDepositing ? (isPreparingTxn ? (
+                            <span>
+                                Preparing transaction <InlineLoader/>
+                            </span>
+                        ) : (
+                            <span>
+                                Depositing <InlineLoader/>
+                            </span>
+                        )) : (
+                            isApproving && (
+                                <span>
+                                    Approving <InlineLoader/>
+                                </span>
+                            )
+                        )}
+                    </span>
                 </div>
                 <div className="pt-2">
                     <NFTSection nftIdx={nftIdx} setNftIdx={setNftIdx} nfts={nfts} setNFTs={setNFTs}/>
