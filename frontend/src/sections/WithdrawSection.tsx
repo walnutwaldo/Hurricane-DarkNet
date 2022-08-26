@@ -30,7 +30,7 @@ export function WithdrawSection(props: any) {
     const sRef = useRef<HTMLInputElement>(null);
     const currentSecret = secretContext!.assets[idx];
 
-    const [nftContract, nftInfo] = useNftFromSecret(currentSecret);
+    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -58,8 +58,8 @@ export function WithdrawSection(props: any) {
 
         const input = {
             mimcK: "0",
-            tokenAddress: nftInfo.contract.address,
-            tokenId: nftInfo.tokenId,
+            tokenAddress: BigNumber.from(tokenAddress).toString(),
+            tokenId: tokenId!.toString(),
             withdrawer: await signer!.getAddress(),
             secret: secret.secret.toString(),
             secretNoise: secret.noise.toString(),

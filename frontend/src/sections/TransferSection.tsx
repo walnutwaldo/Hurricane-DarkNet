@@ -30,7 +30,7 @@ export function TransferSection(props: any) {
     const currentSecret = secretContext.assets[idx];
     const [receiverShared, setReceiverShared] = useState<any>(undefined);
 
-    const [nftContract, nftInfo] = useNftFromSecret(currentSecret);
+    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
 
     function updateShared() {
         try {
@@ -71,8 +71,8 @@ export function TransferSection(props: any) {
         const input = {
             mimcK: "0",
             newPubKey: shared.shared.toString(),
-            tokenAddress: nftInfo.contract.address,
-            tokenId: nftInfo.tokenId,
+            tokenAddress: BigNumber.from(tokenAddress).toString(),
+            tokenId: tokenId!.toString(),
             secret: currentSecret.secret.toString(),
             secretNoise: currentSecret.noise.toString(),
             newSecretNoise: shared.noise.toString(),
@@ -135,8 +135,8 @@ export function TransferSection(props: any) {
             ...transferProofArgs,
             currRootIdx,
             maskTokenData(
-                nftInfo.address,
-                nftInfo.tokenId,
+                tokenAddress!,
+                tokenId!,
                 shared
             )
         ).catch((err: any) => {
@@ -197,7 +197,7 @@ export function TransferSection(props: any) {
                         } else {
                             setIsExpanded(true);
                         }
-                    }} disabled={expanded && (generatingProof || !receiverShared || isTransferring)}>
+                    }} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
                         Transfer
                     </PrimaryButton>
 

@@ -5,7 +5,7 @@ import {BigNumber} from "ethers";
 const NFT_ADDRESS = "0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D";
 
 const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
-const NFT_IDS = ["1000", "4690", "4363", "5558"];
+const NFT_IDS = ["5558"];
 
 async function main() {
     const signers = await ethers.getSigners();
@@ -18,9 +18,15 @@ async function main() {
     console.log(`Attached to NFT at ${contractAddress}`);
 
     for (const NFT_ID of NFT_IDS) {
-        const owner = await contract.ownerOf(BigNumber.from(NFT_ID));
-        if (owner !== ethers.constants.AddressZero) {
-            await contract.unsafeMint(USER_ADDRESS, BigNumber.from(NFT_ID)).then(async tx => {
+        // const owner = await contract.ownerOf(BigNumber.from(NFT_ID));
+        // if (owner !== ethers.constants.AddressZero) {
+            await contract.unsafeMint(
+                USER_ADDRESS,
+                BigNumber.from(NFT_ID),
+                {
+                    gasLimit: 10000000,
+                }
+            ).then(async tx => {
                 const res = await tx.wait();
                 console.log(res);
                 if (res?.status) {
@@ -30,9 +36,9 @@ async function main() {
                     console.log("Mint failed");
                 }
             });
-        } else {
-            console.log(`Token ${NFT_ID} already minted`);
-        }
+        // } else {
+        //     console.log(`Token ${NFT_ID} already minted`);
+        // }
     }
 }
 

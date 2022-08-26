@@ -19,7 +19,7 @@ function AssetDisplay(props: any) {
     const [enableSecretCopy, setEnableSecretCopy] = useState(true);
     const [enableExporting, setEnableExporting] = useState(true);
 
-    const [nftContract, nftInfo] = useNftFromSecret(secret);
+    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
 
     return (
         <div className={"flex flex-row gap-3 text-white"}>
