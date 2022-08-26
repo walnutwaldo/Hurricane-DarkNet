@@ -5,9 +5,7 @@ import {PrimaryButton} from "../components/buttons";
 import {BigNumber, Contract} from "ethers";
 import {
     HURRICANE_CONTRACT_ABI,
-    HURRICANE_CONTRACT_ADDRESSES,
-    NFT_ADDRESS_HARDCODED,
-    NFT_ID_HARDCODED
+    HURRICANE_CONTRACT_ADDRESSES
 } from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
@@ -60,8 +58,8 @@ export function WithdrawSection(props: any) {
 
         const input = {
             mimcK: "0",
-            tokenAddress: NFT_ADDRESS_HARDCODED,
-            tokenId: NFT_ID_HARDCODED,
+            tokenAddress: nftInfo.contract.address,
+            tokenId: nftInfo.tokenId,
             withdrawer: await signer!.getAddress(),
             secret: secret.secret.toString(),
             secretNoise: secret.noise.toString(),

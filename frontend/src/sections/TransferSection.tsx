@@ -5,9 +5,7 @@ import {BigNumber, Contract} from "ethers";
 import {PrimaryButton, SecondaryButton} from "../components/buttons";
 import {
     HURRICANE_CONTRACT_ABI,
-    HURRICANE_CONTRACT_ADDRESSES,
-    NFT_ADDRESS_HARDCODED,
-    NFT_ID_HARDCODED
+    HURRICANE_CONTRACT_ADDRESSES
 } from "../contracts/deployInfo";
 import {useNftFromSecret} from "../utils/useNftFromSecret";
 import mimc from "../crypto/mimc";
@@ -73,8 +71,8 @@ export function TransferSection(props: any) {
         const input = {
             mimcK: "0",
             newPubKey: shared.shared.toString(),
-            tokenAddress: NFT_ADDRESS_HARDCODED,
-            tokenId: NFT_ID_HARDCODED,
+            tokenAddress: nftInfo.contract.address,
+            tokenId: nftInfo.tokenId,
             secret: currentSecret.secret.toString(),
             secretNoise: currentSecret.noise.toString(),
             newSecretNoise: shared.noise.toString(),
@@ -137,8 +135,8 @@ export function TransferSection(props: any) {
             ...transferProofArgs,
             currRootIdx,
             maskTokenData(
-                NFT_ADDRESS_HARDCODED,
-                NFT_ID_HARDCODED,
+                nftInfo.address,
+                nftInfo.tokenId,
                 shared
             )
         ).catch((err: any) => {

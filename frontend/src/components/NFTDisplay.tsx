@@ -2,6 +2,9 @@ import React from "react";
 
 export function NFTDisplay(props: any) {
     const {nft} = props;
+
+    const url = nft.media[0]?.gateway || nft.media[0]?.raw || "";
+
     return (
         <div className={
             "p-2 rounded-md" +
@@ -9,7 +12,7 @@ export function NFTDisplay(props: any) {
         }>
             <h4>{nft.title}</h4>
             <div className={"pb-1"}>
-                <img className="rounded-md" alt={nft.title} src={nft.media[0].gateway} width={250}/>
+                <img className="rounded-md" alt={nft.title} src={url} width={250}/>
             </div>
         </div>
     )

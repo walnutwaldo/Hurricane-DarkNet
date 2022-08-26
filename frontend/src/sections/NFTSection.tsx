@@ -7,12 +7,13 @@ import {useNetwork, useSigner} from "wagmi";
 import InlineLoaderFast from "../components/InlineLoaderFast";
 import {PrimaryButton} from "../components/buttons";
 import {NFTDisplay} from "../components/NFTDisplay";
-import {NFT_ADDRESS_HARDCODED, NFT_ID_HARDCODED} from "../contracts/deployInfo";
 
 const NETWORK_TO_CHAIN = {
     'goerli': Network.ETH_GOERLI,
     "ethereum": Network.ETH_MAINNET
 }
+
+const NFT_ADDRESS_HARDCODED = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
 
 export default function NFTSection(props: any) {
     const {nftIdx, setNftIdx, nfts, setNFTs} = props;
@@ -40,6 +41,7 @@ export default function NFTSection(props: any) {
                 signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
                     setNFTs(res.ownedNfts);
                     console.log(res);
+                    console.log(JSON.stringify(res));
                     setLoadingNFTs(false);
                 }));
             } else {

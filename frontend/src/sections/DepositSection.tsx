@@ -7,13 +7,9 @@ import {
     HURRICANE_CONTRACT_ABI,
     HURRICANE_CONTRACT_ADDRESSES,
     NFT_ABI,
-    NFT_ADDRESS_HARDCODED, NFT_ID_HARDCODED
 } from "../contracts/deployInfo";
 import InlineLoader from "../components/InlineLoader";
 import NFTSection from "./NFTSection";
-
-// @ts-ignore
-const {groth16, zKey} = snarkjs;
 
 export function DepositSection() {
     const {chain, chains} = useNetwork()
@@ -22,7 +18,6 @@ export function DepositSection() {
 
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-    const shRef = useRef<HTMLInputElement>(null);
 
     const [isApproving, setIsApproving] = useState(false);
     const [isDepositing, setIsDepositing] = useState(false);
