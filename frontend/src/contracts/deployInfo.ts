@@ -1,7 +1,8 @@
-import abi from "../contracts/hurricane_abi.json";
+import abi from "./hurricane_abi.json";
+import nft_abi from "./nft_abi.json";
+import addresses from "./hurricane_addresses.json";
 
 export const HURRICANE_CONTRACT_ABI = abi;
-export const HURRICANE_CONTRACT_ADDRESS = {
-    "goerli": "0x7cf3292EA5495b5F78c62fd85E28A9CA6991DbFf",
-	"localhost": "0x0165878A594ca255338adfa4d48449f69242Eb8F"
-};
+export const HURRICANE_CONTRACT_ADDRESSES = addresses;
+
+export const NFT_ABI = nft_abi;

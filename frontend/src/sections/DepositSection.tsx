@@ -1,87 +1,155 @@
-import React, {useContext, useRef, useState} from "react";
-import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useNetwork, useSigner} from "wagmi";
-import {BigNumber, Contract, ethers} from "ethers";
+import React, {useContext, useEffect, useRef, useState} from "react";
+import SecretContext, {generateSecret, maskTokenData, Secret} from "../contexts/SecretContext";
+import {useNetwork, useSigner} from "wagmi";
+import {BigNumber, Contract} from "ethers";
 import {PrimaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
-import mimc from "../crypto/mimc";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES,
+    NFT_ABI,
+} from "../contracts/deployInfo";
 import InlineLoader from "../components/InlineLoader";
 import NFTSection from "./NFTSection";
 
-// @ts-ignore
-const {groth16, zKey} = snarkjs;
-const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-
 export function DepositSection() {
     const {chain, chains} = useNetwork()
-    const secretContext = useContext(SecretContext);
-    const [isDepositing, setIsDepositing] = useState(false);
-    const [isPreparingTxn, setIsPreparingTxn] = useState(false);
-	const [depositErrMsg, setDepositErrMsg] = useState("");
 
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
-    console.log("chain name", chain?.name);
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
+
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-	const shRef = useRef<HTMLInputElement>(null);
 
-    async function makeDeposit(currentShared: BigNumber ) {
+    const [isApproving, setIsApproving] = useState(false);
+    const [isDepositing, setIsDepositing] = useState(false);
+    const [isPreparingTxn, setIsPreparingTxn] = useState(false);
+    const [depositErrMsg, setDepositErrMsg] = useState("");
+
+    const [nfts, setNFTs] = useState([]);
+    const [nftIdx, setNftIdx] = useState<number>(-1);
+
+    const {addAsset} = useContext(SecretContext);
+
+    const nft: any = nftIdx === -1 ? undefined : nfts[nftIdx];
+
+    const nftAddress = nft?.contract?.address;
+    const nftId = nft?.tokenId;
+
+    const nftContract = nft ? new Contract(nftAddress, NFT_ABI, signer!) : undefined;
+    const [isApproved, setIsApproved] = useState(false);
+
+    useEffect(() => {
+        if (nftContract) {
+            nftContract.getApproved(nft.tokenId).then((approved: any) => {
+                console.log("approved address:", approved);
+                setIsApproved(approved === contractAddress);
+            });
+        }
+    }, [nft])
+
+    async function approveNFT() {
+        if (!nft) return;
+        setIsApproving(true);
+        const approvalTx = await nftContract!.approve(contractAddress, nftId).catch(console.log);
+        console.log("approval tx", approvalTx);
+        if (approvalTx) {
+            const approveResult = await approvalTx.wait().catch(console.log);
+            console.log("approval result", approveResult);
+
+            if (!approveResult?.status) {
+                setDepositErrMsg("Approval failed");
+            } else {
+                setIsApproved(true);
+            }
+        }
+        setIsApproving(false);
+    }
+
+    async function makeDeposit(
+        secret: Secret,
+        tokenAddress: string,
+        tokenId: BigNumber | string
+    ) {
         setIsDepositing(true);
         setIsPreparingTxn(true);
         setDepositErrMsg("");
-        const tx = await contract.deposit(currentShared, {
-            value: ethers.utils.parseEther('0.1')
-        }).catch((err: any) => {
-            console.log(err);
+        tokenId = BigNumber.from(tokenId);
+
+        const tx = await contract.deposit(
+            secret.shared,
+            tokenAddress,
+            tokenId,
+            maskTokenData(
+                tokenAddress,
+                tokenId,
+                secret
+            ),
+            secret.noise,
+            {
+                gasLimit: 10000000
+            }
+        ).catch((err: any) => {
+            console.log("txErr", err);
             setIsDepositing(false);
             setIsPreparingTxn(false);
         });
-        console.log("finished sending tx in metamask");
+        console.log("deposit tx:", tx);
         setIsPreparingTxn(false);
-        const result = await tx.wait();
-        console.log("waited on tx");
+        const result = await tx.wait().catch((resErr: any) => {
+            console.log("txWaitErr", resErr);
+            setIsDepositing(false);
+            setDepositErrMsg("Deposit failed");
+        });
+        if (!result?.status) {
+            setDepositErrMsg("Deposit failed");
+        }
+        console.log("deposit result:", result);
+        setIsPreparingTxn(false);
         setIsDepositing(false);
     }
 
     return (
         <div>
-            <h3 className={"text-lg text-cyan-100 font-bold"}>
+            <h3 className={"text-lg text-lightgreen font-bold"}>
                 DEPOSIT
             </h3>
-        	<div>
+            <div>
                 <div className="flex flex-row gap-2">
                     <PrimaryButton onClick={async () => {
-						// first, generate
-						console.log("Generating");
-		                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
-    		            // Concatenate into hex string
-        		        const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
-            		    const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
-                		const leaf = mimc(secret, "0");
-                		console.log(leaf, await contract.indexOfLeaf(leaf));
-                        await makeDeposit(leaf);
-                		const isPaid =await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero()); // should be true
-		                secretContext!.addAsset!({
-    		                secret: secret,
-        		            shared: leaf,
-                		});
-                    }} disabled={isDepositing}>
-                    	Deposit 0.1 ETH
-					</PrimaryButton>
-                    {isDepositing && (isPreparingTxn ? (
-                        <span className="text-cyan-100">
-                                        Preparing transaction <InlineLoader/>
-                                    </span>
-                    ) : (
-                        <span className="text-cyan-100">
-                                        Depositing <InlineLoader/>
-                                    </span>
-                    ))}
-				</div>
-				<div className="pt-2"> 
-					<NFTSection/>	
-				</div>
-			</div>
-		</div>
+                        // first, generate
+                        if (isApproved) {
+                            console.log("Generating Secret");
+                            const secret = generateSecret();
+                            console.log("nft", nft);
+                            await makeDeposit(secret, nftAddress, nftId);
+                            addAsset!(secret);
+                        } else {
+                            approveNFT();
+                        }
+                    }} disabled={isDepositing || isApproving || nftIdx === -1}>
+                        {nft ? (isApproved ? "Deposit " : "Approve ") + ` ${nft.title}` : 'Select an NFT'}
+                    </PrimaryButton>
+                    <span className={"text-lightgreen"}>
+                        {isDepositing ? (isPreparingTxn ? (
+                            <span>
+                                Preparing transaction <InlineLoader/>
+                            </span>
+                        ) : (
+                            <span>
+                                Depositing <InlineLoader/>
+                            </span>
+                        )) : (
+                            isApproving && (
+                                <span>
+                                    Approving <InlineLoader/>
+                                </span>
+                            )
+                        )}
+                    </span>
+                </div>
+                <div className="pt-2">
+                    <NFTSection nftIdx={nftIdx} setNftIdx={setNftIdx} nfts={nfts} setNFTs={setNFTs}/>
+                </div>
+            </div>
+        </div>
     )
 }

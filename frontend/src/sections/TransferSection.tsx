@@ -1,9 +1,13 @@
 import React, {useContext, useRef, useState} from "react";
-import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useNetwork, useSigner} from "wagmi";
-import {BigNumber, Contract, ethers} from "ethers";
+import SecretContext, {maskTokenData, sharedKeyToSecret} from "../contexts/SecretContext";
+import {useNetwork, useSigner} from "wagmi";
+import {BigNumber, Contract} from "ethers";
 import {PrimaryButton, SecondaryButton} from "../components/buttons";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES
+} from "../contracts/deployInfo";
+import {useNftFromSecret} from "../utils/useNftFromSecret";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 
@@ -14,15 +18,29 @@ export function TransferSection(props: any) {
     const {idx, rm} = props
     const {chain, chains} = useNetwork();
     const secretContext = useContext(SecretContext);
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
-    const sRef = useRef<HTMLInputElement>(null);
     const shRef = useRef<HTMLInputElement>(null);
+
+    const currentSecret = secretContext.assets[idx];
+    const [receiverShared, setReceiverShared] = useState<any>(undefined);
+
+    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
+
+    function updateShared() {
+        try {
+            setReceiverShared(
+                shRef.current ? (sharedKeyToSecret(shRef.current.value) || undefined) : undefined
+            )
+        } catch {
+            setReceiverShared(undefined);
+        }
+    }
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -35,56 +53,92 @@ export function TransferSection(props: any) {
     ] = useState<string[] | undefined>(undefined);
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
-    async function runProof(currentSecret: BigNumber, receiverShared: BigNumber) {
-        console.log("running proof");
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0", 91)));
-        console.log("running proof");
+    async function runProof(
+        shared: {
+            shared: BigNumber,
+            noise: BigNumber
+            tokenMask: BigNumber,
+            tokenIdMask: BigNumber
+        }
+    ) {
+        const leaf = mimc(currentSecret.secret, "0");
+        const leafIdx = await contract.leafForPubkey(leaf);
+        const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
 
-        console.log(siblingsData);
-
-        // console.log("siblings", siblingsData);
-        // console.log("dir", dir);
         const input = {
             mimcK: "0",
-            receiver: receiverShared.toString(),
-            secret: currentSecret.toString(),
+            newPubKey: shared.shared.toString(),
+            tokenAddress: BigNumber.from(tokenAddress).toString(),
+            tokenId: tokenId!.toString(),
+            secret: currentSecret.secret.toString(),
+            secretNoise: currentSecret.noise.toString(),
+            newSecretNoise: shared.noise.toString(),
             others: others,
             dir: dir,
         }
         const {
             proof,
             publicSignals
-        } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
+        } = await groth16.fullProve(input, "circuit/transfer.wasm", "circuit/transfer.zkey");
+
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
-        console.log("publicSignals", publicSignals);
+
+        const res = {
+            proof,
+            publicSignals,
+            rootIdx
+        }
+
+        console.log("proofRes", res);
+
+        return res;
     }
 
-    const transferProofArgs = (proof && publicSignals) ? [
-        [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
-        [
-            [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
-            [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
-        ],
-        [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-        publicSignals.map((s) => BigNumber.from(s)),
-    ] : [];
-
+    const [expanded, setIsExpanded] = useState(false);
     const [isTransferring, setIsTransferring] = useState(false);
     const [transferErrMsg, setTransferErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
-    async function makeTransfer(receiverShared: BigNumber) {
+    async function makeTransfer(
+        proofRes: any,
+        shared: {
+            shared: BigNumber,
+            noise: BigNumber
+            tokenMask: BigNumber,
+            tokenIdMask: BigNumber
+        }
+    ) {
         setIsTransferring(true);
         setIsPreparingTxn(true);
+
+        const {
+            proof: currProof,
+            publicSignals: currSignals,
+            rootIdx: currRootIdx
+        } = proofRes;
+        const transferProofArgs = (currProof && currSignals) ? [
+            [BigNumber.from(currProof.pi_a[0]), BigNumber.from(currProof.pi_a[1])],
+            [
+                [BigNumber.from(currProof.pi_b[0][1]), BigNumber.from(currProof.pi_b[0][0])],
+                [BigNumber.from(currProof.pi_b[1][1]), BigNumber.from(currProof.pi_b[1][0])]
+            ],
+            [BigNumber.from(currProof.pi_c[0]), BigNumber.from(currProof.pi_c[1])],
+            currSignals.map((s: string) => BigNumber.from(s)),
+        ] : [];
+
         const tx = await contract.transfer(
             ...transferProofArgs,
-            rootIdx,
-            receiverShared
+            currRootIdx,
+            maskTokenData(
+                tokenAddress!,
+                tokenId!,
+                shared
+            )
         ).catch((err: any) => {
             console.log(err);
             setTransferErrMsg("Transfer failed (possibly secret already taken)");
@@ -94,72 +148,59 @@ export function TransferSection(props: any) {
         console.log("transfer pending");
         setIsPreparingTxn(false);
         const result = await tx.wait();
-        console.log("transfer success");
+        if (!result?.status) {
+            setTransferErrMsg("Transfer failed (possibly secret already taken)");
+        } else {
+            console.log("transfer success");
+        }
         setIsTransferring(false);
         setProof(undefined);
     }
 
     return (
-        <div >
+        <div>
             <h3 className={"text-lg text-black font-bold"}>
             </h3>
             <div>
-            {isTransferring && (
-                            <div>
-                                <label>Receiver's shared key:</label>
-                                <input type="text" name="sharedTextbox" ref={shRef}
-                                     className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}/><br/>
-                              <SecondaryButton type="submit" onClick={() => {
+                {expanded && (
+                    <div>
+                        <label>Receiver's shared key:</label>
+                        <input
+                            type="text"
+                            name="sharedTextbox"
+                            ref={shRef}
+                            className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
+                            onChange={updateShared}
+                        /><br/>
+                        <SecondaryButton
+                            type="submit"
+                            onClick={() => {
                                 setIsTransferring(false);
-                              }}>
-                                Cancel
-                              </SecondaryButton>
-                              </div>  
-                              )}
+                            }}
+                        >
+                            Cancel
+                        </SecondaryButton>
+                    </div>
+                )}
                 <div className={"text-red-500"}>{transferErrMsg}</div>
 
                 <div className="flex flex-row gap-2">
                     <PrimaryButton type="submit" onClick={() => {
-                        
-                        if (isTransferring){
+                        if (expanded && receiverShared) {
                             setTransferErrMsg("");
-                            let currentSecret = BigNumber.from("0");
-                            try {
-                                currentSecret = BigNumber.from(secretContext!.assets[idx].secret);
-                                console.log(currentSecret);
-                            } catch (err) {
-                                setTransferErrMsg("Use an actual number for the secret!");
-                                return;
-                            }
-                            if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                                setTransferErrMsg("Secret out of bounds");
-                                return;
-                            }
                             setGeneratingProof(true);
-                            let receiverShared = BigNumber.from("0");
-                            try {
-                                receiverShared = BigNumber.from(shRef.current!.value);
-                                console.log(receiverShared);
-                            } catch (err) {
-                                setTransferErrMsg("Use an actual number for the secret!");
-                                return;
-                            }
-                            if (receiverShared.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                                setTransferErrMsg("Secret out of bounds");
-                                return;
-                            }
-                            runProof(currentSecret, receiverShared).then(() => {
+                            runProof(receiverShared).then((proofRes) => {
                                 setGeneratingProof(false);
-                                makeTransfer(receiverShared);
+                                makeTransfer(proofRes, receiverShared).then();
+                                setIsExpanded(false);
                             })
+                        } else {
+                            setIsExpanded(true);
                         }
-                        else{
-                            setIsTransferring(true);
-                        }
-                    }} disabled = {generatingProof}>
+                    }} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
                         Transfer
                     </PrimaryButton>
-                    
+
                 </div>
                 <div>
                     {

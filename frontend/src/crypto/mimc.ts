@@ -1,6 +1,6 @@
-const {BigNumber} = require("ethers");
+import {BigNumber} from "ethers";
 
-var c = [
+const c = [
 	BigNumber.from("0"),
 	BigNumber.from("20888961410941983456478427210666206549300505294776164667214940546594746570981"),
 	BigNumber.from("15265126113435022738560151911929040668591755459209400716467504685752745317193"),
@@ -94,23 +94,33 @@ var c = [
 	BigNumber.from("13602139229813231349386885113156901793661719180900395818909719758150455500533")
 ];
 
-var P = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+const P = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-function exp(a: typeof BigNumber | number, n: typeof BigNumber | number): typeof BigNumber {
-	if (n === 0) {
+function exp(a: BigNumber | number, n: BigNumber | number): BigNumber {
+	a = BigNumber.from(a);
+	n = BigNumber.from(n);
+	if (n.eq(BigNumber.from(0))) {
 		return BigNumber.from("1");
 	}
-	var b: typeof BigNumber = exp((a.mul(a)).mod(P), n/2);
-	return (n & 1 ? (a.mul(b)).mod(P) : b);
+	const b: BigNumber = exp((a.mul(a)).mod(P), n.div(2));
+	return (n.mod(2).eq(BigNumber.from(1)) ? (a.mul(b)).mod(P) : b);
 };
 
-export default function mimc(input: typeof BigNumber | string | number, k: typeof BigNumber | string | number, rounds: number = 91): typeof BigNumber {
-    input = BigNumber.from(input);
-    k = BigNumber.from(k);
+const memtable = new Map<string, BigNumber>();
 
-	var t: typeof BigNumber = (k.add(input)).mod(P);
+export default function mimc(input: BigNumber | string | number, k: BigNumber | string | number, rounds: number = 91): BigNumber {
+	input = BigNumber.from(input);
+    k = BigNumber.from(k);
+	const memString = input.toString() + "," + k.toString() + "," + rounds;
+	if (memtable.has(memString)) {
+		return memtable.get(memString)!;
+	}
+
+	let t: BigNumber = (k.add(input)).mod(P);
 	for (var i: number = 1; i < rounds; i++) {
 		t = ((exp(t, 7).add(k)).add(c[i])).mod(P);
 	}
-    return (exp(t, 7).add(k)).mod(P);
+    const res = (exp(t, 7).add(k)).mod(P);
+	memtable.set(memString, res);
+	return res;
 };

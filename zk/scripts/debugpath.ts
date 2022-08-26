@@ -1,9 +1,7 @@
 import {ethers} from "hardhat";
-import hasher from "./hasher";
-import {BigNumber} from "ethers";
 
-const CONTRACT_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-const LEAF = "19616332773051217127231775132683539232514597215404186078616483029608492336643";
+const CONTRACT_ADDRESS = "0x40918Ba7f132E0aCba2CE4de4c4baF9BD2D7D849";
+const LEAF_IDX = 1;
 
 async function main() {
     const signers = await ethers.getSigners();
@@ -12,9 +10,10 @@ async function main() {
     const Hurricane = await ethers.getContractFactory("Hurricane");
     const hurricaneContract = await Hurricane.attach(CONTRACT_ADDRESS);
 
-    const leaf = BigNumber.from(LEAF);
-    const index = await hurricaneContract.indexOfLeaf(leaf);
-    console.log(`index: ${index}`);
+    console.log(`root: ${await hurricaneContract.merkleRoots(0)}`);
+    console.log(`root: ${await hurricaneContract.merkleRoots(1)}`);
+    console.log(`root: ${await hurricaneContract.merkleRoots(2)}`);
+    console.log(`root: ${await hurricaneContract.merkleRoots(3)}`);
 }
 
 main().catch((error) => {

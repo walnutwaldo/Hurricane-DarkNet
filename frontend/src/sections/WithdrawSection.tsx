@@ -1,12 +1,15 @@
 import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
-import {useContractRead, useNetwork, useSigner} from "wagmi";
-import {PrimaryButton, SecondaryButton, AlertButton} from "../components/buttons";
-import {BigNumber, Contract, ethers} from "ethers";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "../contracts/deployInfo";
+import {useNetwork, useSigner} from "wagmi";
+import {PrimaryButton} from "../components/buttons";
+import {BigNumber, Contract} from "ethers";
+import {
+    HURRICANE_CONTRACT_ABI,
+    HURRICANE_CONTRACT_ADDRESSES
+} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
-import { text } from "node:stream/consumers";
+import {useNftFromSecret} from "../utils/useNftFromSecret";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -16,8 +19,8 @@ export function WithdrawSection(props: any) {
     const {idx, rm} = props
     const {chain, chains} = useNetwork()
 
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
     const secretContext = useContext(SecretContext);
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
@@ -25,6 +28,9 @@ export function WithdrawSection(props: any) {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const sRef = useRef<HTMLInputElement>(null);
+    const currentSecret = secretContext!.assets[idx];
+
+    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -35,61 +41,98 @@ export function WithdrawSection(props: any) {
         publicSignals,
         setPublicSignals
     ] = useState<string[] | undefined>(undefined);
-    
+
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
-    async function runProof(currentSecret: BigNumber) {
-        const siblingsData = await contract.getPath(await contract.indexOfLeaf(mimc(currentSecret, "0")));
+    async function runProof(
+        secret: {
+            secret: BigNumber,
+            noise: BigNumber
+        }
+    ) {
+        const leafIdx = await contract.leafForPubkey(mimc(secret.secret, "0"));
+        const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
         const dir = siblingsData.dirs.map((dir: BigNumber) => dir.toString());
         const rootIdx = siblingsData.rootIdx;
 
-        console.log(siblingsData);
         const input = {
             mimcK: "0",
-            receiver: await signer!.getAddress(),
-            secret: currentSecret.toString(),
+            tokenAddress: BigNumber.from(tokenAddress).toString(),
+            tokenId: tokenId!.toString(),
+            withdrawer: await signer!.getAddress(),
+            secret: secret.secret.toString(),
+            secretNoise: secret.noise.toString(),
             others: others,
             dir: dir,
         }
         const {
             proof,
             publicSignals
-        } = await groth16.fullProve(input, "circuit/withdrawer_big.wasm", "circuit/withdrawer_big.zkey");
+        } = await groth16.fullProve(input, "circuit/withdraw.wasm", "circuit/withdraw.zkey");
+
+        const merkleRoot = publicSignals[0];
+
+        console.log({
+            leafIdx,
+            others,
+            dir,
+            rootIdx,
+            merkleRoot
+        });
+
         setProof(proof);
         setRootIdx(rootIdx);
         setPublicSignals(publicSignals);
-        console.log("publicSignals", publicSignals);
+
+        const res = {
+            proof: proof,
+            publicSignals: publicSignals,
+            rootIdx: rootIdx
+        }
+        console.log("proof res", res);
+
+        return res;
     }
 
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
-    async function makeWithdrawal() {
+    async function makeWithdrawal(proofRes: any) {
+        const {
+            proof,
+            publicSignals,
+            rootIdx
+        } = proofRes;
+
         setIsWithdrawing(true);
         setIsPreparingTxn(true);
-		console.log("proof", proof);
-		console.log("publicSignals", publicSignals);
-		console.log("rootIdx", rootIdx);
-        const withdrawArgs = (proof && publicSignals && rootIdx) ? [
+
+        const proofArgs = (proof && publicSignals && rootIdx) ? [
             [BigNumber.from(proof.pi_a[0]), BigNumber.from(proof.pi_a[1])],
             [
                 [BigNumber.from(proof.pi_b[0][1]), BigNumber.from(proof.pi_b[0][0])],
                 [BigNumber.from(proof.pi_b[1][1]), BigNumber.from(proof.pi_b[1][0])]
             ],
             [BigNumber.from(proof.pi_c[0]), BigNumber.from(proof.pi_c[1])],
-            publicSignals.map((s) => BigNumber.from(s)),
-			BigNumber.from(rootIdx),
+            publicSignals.map((s: string) => BigNumber.from(s))
         ] : [];
-        const tx = await contract.withdraw(...withdrawArgs).catch((err: any) => {
+
+        const tx = await contract.withdraw(
+            ...proofArgs,
+            rootIdx,
+        ).catch((err: any) => {
             console.log(err);
             setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
             setIsWithdrawing(false);
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
-        let result = await tx.wait(); // dis    
+        let result = await tx.wait(); // dis
+        if (!result?.status) {
+            setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
+        }
         setIsWithdrawing(false);
         setProof(undefined);
         rm!(idx);
@@ -101,25 +144,14 @@ export function WithdrawSection(props: any) {
             </h3>
             <PrimaryButton type="submit" onClick={() => {
                 setWithdrawErrMsg("");
-                let currentSecret = BigNumber.from("0");
-                try {
-                    currentSecret = BigNumber.from(secretContext!.assets[idx].secret);
-                } catch (err) {
-                    setWithdrawErrMsg("Use an actual number for the secret!");
-                    return;
-                }
-                if (currentSecret.gte(BigNumber.from("2").pow(BigNumber.from("256")))) {
-                    setWithdrawErrMsg("Secret out of bounds");
-                    return;
-                }
                 setGeneratingProof(true);
-                runProof(currentSecret).then(() => {
+                runProof(currentSecret).then((proofRes) => {
                     setGeneratingProof(false);
-                    makeWithdrawal();
+                    makeWithdrawal(proofRes).then();
                 })
                 
-                }} disabled={generatingProof}>
-                    {isWithdrawing ? "Withdrawing" : "Withdraw"}
+                }} disabled={generatingProof || isWithdrawing}>
+                {isWithdrawing ? <span>Withdrawing<InlineLoader/></span> : "Withdraw"}
             </PrimaryButton>
             <div>
                 </div>
