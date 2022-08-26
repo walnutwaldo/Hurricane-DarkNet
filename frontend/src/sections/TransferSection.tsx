@@ -198,7 +198,7 @@ export function TransferSection(props: any) {
                             setIsExpanded(true);
                         }
                     }} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
-                        Transfer
+                        { isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
                     </PrimaryButton>
 
                 </div>

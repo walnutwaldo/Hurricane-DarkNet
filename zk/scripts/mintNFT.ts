@@ -5,7 +5,7 @@ import {BigNumber} from "ethers";
 const NFT_ADDRESS = "0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D";
 
 const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
-const NFT_IDS = ["5558"];
+const NFT_IDS = ["6679"];
 
 async function main() {
     const signers = await ethers.getSigners();

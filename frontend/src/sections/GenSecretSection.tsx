@@ -1,7 +1,7 @@
 import {useNetwork, useSigner} from "wagmi";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
 import {BigNumber, Contract} from "ethers";
-import React, {useContext, useState} from "react";
+import React, {useContext, useEffect, useState} from "react";
 import SecretContext, {generateSecret, Secret, secretToSharedKey, unmaskTokenData} from "../contexts/SecretContext";
 import {AlertButton, PrimaryButton, SecondaryButton} from "../components/buttons";
 
@@ -38,6 +38,10 @@ function KeyDisplay(props: any) {
         setRefreshing(false);
     }
 
+    useEffect(() => {
+        refresh();
+    }, [contract]);
+
     return (
         <div className={"flex flex-row gap-3 text-white"}>
             <AlertButton onClick={() => {
@@ -57,15 +61,11 @@ function KeyDisplay(props: any) {
                 {enableSharedCopy ? "Copy" : "Copied!"}
             </SecondaryButton>
             <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-               	{secretToSharedKey(secret).substr(0,6) + "..."}
+               	{secretToSharedKey(secret).substr(0, 6) + "..."}
            	</span>
-            <label><b>Status:</b></label>
             <SecondaryButton onClick={refresh} disabled={refreshing}>
-                Refresh
+                Refresh Status
             </SecondaryButton>
-            <   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                Unpaid
-            </span>
         </div>
     )
 }
@@ -80,7 +80,7 @@ function YourKeysSection() {
 
     return (
         <div>
-            { keys.length == 0 ? "No outgoing requests." : <>
+            {keys.length == 0 ? "No outgoing requests." : <>
                 <h3 className={"text-lg text-lightgreen font-bold"}>
                     YOUR REQUESTS
                 </h3>
