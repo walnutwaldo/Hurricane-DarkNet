@@ -291,11 +291,11 @@ export default function Content() {
         JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
-    function addKey(secret: Secret,) {
+    function addKey(secret: Secret) {
         updKeys({secret, upd: AddRem.Add});
     }
 
-    function addAsset(secret: Secret,) {
+    function addAsset(secret: Secret) {
         updAssets({secret, upd: AddRem.Add});
     }
 
