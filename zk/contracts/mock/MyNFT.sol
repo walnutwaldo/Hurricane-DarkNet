@@ -13,5 +13,4 @@ contract MyNFT is ERC721Tradable {
     function unsafeMint(address to, uint256 tokenId) public {
         _safeMint(to, tokenId, "");
     }
-
 }

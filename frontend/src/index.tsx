@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './styles/index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-
+import MintSection from './sections/MintNFTSection';
 import '@rainbow-me/rainbowkit/styles.css';
 
 import {
@@ -48,6 +48,7 @@ root.render(
                 accentColorForeground: '#234239',
             })}>
                 <App/>
+                
             </RainbowKitProvider>
         </WagmiConfig>
     </React.StrictMode>

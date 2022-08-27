@@ -1,5 +1,6 @@
 import './styles/App.css';
 import Content from "./Content";
+import MintSection from './sections/MintNFTSection';
 import React from 'react';
 import {ConnectButton} from '@rainbow-me/rainbowkit';
 import {useSigner} from "wagmi";
@@ -35,6 +36,9 @@ function App() {
             </div>
             <div className={"container mx-auto py-4 flex-1"}>
                 <Content/>
+            </div>
+            <div>
+                <MintSection/>
             </div>
             <div className={"bg-darkgreen text-white courier-new"}>
                 <div className="container mx-auto pt-2 pb-4">
