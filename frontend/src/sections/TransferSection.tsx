@@ -15,7 +15,7 @@ import InlineLoader from "../components/InlineLoader";
 const {groth16, zKey} = snarkjs;
 
 export function TransferSection(props: any) {
-    const {idx, rm, setAssetSel, setErrMsg, setExportState} = props
+    const {idx, removeAsset, setAssetSel, setErrMsg, setExportState, nftInfo, tokenAddress, tokenId} = props
     const {chain, chains} = useNetwork();
     const secretContext = useContext(SecretContext);
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
@@ -27,10 +27,8 @@ export function TransferSection(props: any) {
 
     const shRef = useRef<HTMLInputElement>(null);
 
-    const currentSecret = secretContext.assets[idx];
+    const secret = secretContext.assets[idx];
     const [receiverShared, setReceiverShared] = useState<any>(undefined);
-
-    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(currentSecret);
 
     function updateShared() {
         try {
@@ -61,7 +59,7 @@ export function TransferSection(props: any) {
             tokenIdMask: BigNumber
         }
     ) {
-        const leaf = mimc(currentSecret.secret, "0");
+        const leaf = mimc(secret.secret, "0");
         const leafIdx = await contract.leafForPubkey(leaf);
         const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
@@ -73,8 +71,8 @@ export function TransferSection(props: any) {
             newPubKey: shared.shared.toString(),
             tokenAddress: BigNumber.from(tokenAddress).toString(),
             tokenId: tokenId!.toString(),
-            secret: currentSecret.secret.toString(),
-            secretNoise: currentSecret.noise.toString(),
+            secret: secret.secret.toString(),
+            secretNoise: secret.noise.toString(),
             newSecretNoise: shared.noise.toString(),
             others: others,
             dir: dir,
@@ -156,7 +154,7 @@ export function TransferSection(props: any) {
         setExportState("Exporting");
         if (result?.status) {
             console.log("transfer success");
-            rm!(idx);
+            removeAsset!(idx);
             setAssetSel!(-1);
         }
     }

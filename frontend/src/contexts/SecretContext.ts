@@ -144,9 +144,9 @@ type SecretContext = {
     assets: Secret[],
     addKey?: (newSecret: Secret) => void,
     addAsset?: (newSecret: Secret) => void,
-    removeKey?: (idx: number) => void,
-    removeAsset?: (idx: number) => void,
-    updateStatus?: (idx: number) => void,
+    removeKey?: (secret: Secret) => void,
+    removeAsset?: (secret: Secret) => void,
+    updateStatus?: (secret: Secret) => void,
 }
 
 

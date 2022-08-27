@@ -36,7 +36,7 @@ function KeyDisplay(props: any) {
         );
         const isPaid = (await contract.getLeaf(leafIdx)).eq(leaf);
         if (isPaid) {
-            updateStatus?.(idx);
+            updateStatus?.(secret);
         }
         setRefreshing(false);
     }
@@ -78,7 +78,7 @@ function KeyDisplay(props: any) {
             </div>
             <div className={"grid text-white max-w-full"}>
                 <SecondaryButton onClick={() => {
-                    removeKey!(idx);
+                    removeKey!(secret);
                 }}>
                     Cancel
                 </SecondaryButton>

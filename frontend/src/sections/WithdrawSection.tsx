@@ -17,11 +17,10 @@ const {groth16, zKey} = snarkjs;
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 export function WithdrawSection(props: any) {
-    const {idx, rm, setAssetSel, setErrMsg, setExportState} = props
+    const {idx, removeAsset, setAssetSel, setErrMsg, setExportState, secret, tokenAddress, tokenId} = props
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
-    const secretContext = useContext(SecretContext);
 
     const [generatingProof, setGeneratingProof] = useState(false);
 
@@ -29,11 +28,8 @@ export function WithdrawSection(props: any) {
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
     const sRef = useRef<HTMLInputElement>(null);
-    const currentSecret = secretContext!.assets[idx];
 
     const {refreshNFTs} = useContext(NFTContext);
-
-    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(currentSecret);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -47,12 +43,7 @@ export function WithdrawSection(props: any) {
 
     const [rootIdx, setRootIdx] = useState<BigNumber | undefined>(undefined);
 
-    async function runProof(
-        secret: {
-            secret: BigNumber,
-            noise: BigNumber
-        }
-    ) {
+    async function runProof() {
         const leafIdx = await contract.leafForPubkey(mimc(secret.secret, "0"));
         const siblingsData = await contract.getPath(leafIdx);
         const others = siblingsData.siblings.map((sibling: BigNumber) => sibling.toString());
@@ -140,7 +131,7 @@ export function WithdrawSection(props: any) {
         setIsWithdrawing(false);
         setProof(undefined);
         if (result?.status) {
-            rm!(idx);
+            removeAsset!(secret);
             setAssetSel!(-1);
         }
         refreshNFTs().then();
@@ -153,7 +144,7 @@ export function WithdrawSection(props: any) {
                     setErrMsg("");
                     setExportState("Withdrawing");
                     setGeneratingProof(true);
-                    runProof(currentSecret).then((proofRes) => {
+                    runProof().then((proofRes) => {
                         setGeneratingProof(false);
                         makeWithdrawal(proofRes).then();
                     })

@@ -1,10 +1,10 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useReducer, useState} from 'react';
 import {Contract} from "ethers";
 import SecretContext, {jsonToSecret, Secret, secretToJson, secretToPrivateKey} from './contexts/SecretContext';
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "./contracts/deployInfo";
-import {useNetwork, useSigner} from "wagmi";
+import {useNetwork, useProvider, useSigner} from "wagmi";
 import {TransferSection} from "./sections/TransferSection";
 import {GenerateSecretSection} from "./sections/GenSecretSection";
 import {ConnectButton} from '@rainbow-me/rainbowkit';
@@ -12,27 +12,38 @@ import {AlertButton, PrimaryButton, SecondaryButton, TabButton} from "./componen
 import {useNftFromSecret} from "./utils/useNftFromSecret";
 import NFTProvider from "./contexts/NFTContext";
 import {ChevronDown, MoreVertical, X, XSquare} from "react-feather";
+import {hexZeroPad} from "ethers/lib/utils";
 
 function AssetDisplay(props: any) {
     const {removeAsset, updateStatus} = useContext(SecretContext);
 
-    const {secret, idx, setAssetSel, highlighted} = props;
+    const provider = useProvider()
+
+    const {secret, idx, setAssetSel, highlighted, contract} = props;
 
     const [secretCopied, setSecretCopied] = useState(false);
     const [exportState, setExportState] = useState("Exporting");
     const [errMsg, setErrMsg] = useState("");
 
-    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
-
-    const deleteButton = (
-        <AlertButton onClick={() => {
-            removeAsset!(idx);
-        }}>
-            Delete
-        </AlertButton>
-    )
+    const {nftContract, nftInfo, tokenAddress, tokenId, refresh: refreshNFT} = useNftFromSecret(secret);
 
     const [showDropdown, setShowDropdown] = useState(false);
+
+    useEffect(() => {
+        const filter = contract.filters.NewLeaf(hexZeroPad(secret.shared, 32));
+
+        const listener = (event: any) => {
+            console.log("New Leaf Event");
+            console.log(event);
+            refreshNFT();
+        }
+
+        provider.on(filter, listener);
+
+        return () => {
+            provider.off(filter, listener);
+        };
+    }, [contract]);
 
     return (
         <div className={"gap-1 text-stone-200"}>
@@ -86,7 +97,7 @@ function AssetDisplay(props: any) {
                                         <button
                                             className="text-gray-700 block px-4 py-2 text-sm bg-red-200 rounded-md hover:bg-red-400 hover:text-white transition"
                                             onClick={() => {
-                                                removeAsset!(idx);
+                                                removeAsset!(secret);
                                             }}
                                         >
                                             Delete
@@ -107,12 +118,14 @@ function AssetDisplay(props: any) {
                 + (exportState === "Exporting" ? " grid-cols-2" : " grid-cols-1")
             }>
                 {((exportState == "Exporting") || (exportState == "Withdrawing")) &&
-                    <WithdrawSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
-                                     setExportState={setExportState}/>
+                    <WithdrawSection idx={idx} removeAsset={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
+                                     setExportState={setExportState} secret={secret} tokenAddress={tokenAddress}
+                                     tokenId={tokenId}/>
                 }
                 {((exportState == "Exporting") || (exportState == "Transferring")) &&
-                    <TransferSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
-                                     setExportState={setExportState}/>
+                    <TransferSection idx={idx} removeAsset={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
+                                     setExportState={setExportState} nftInfo={nftInfo} tokenAddress={tokenAddress}
+                                     tokenId={tokenId}/>
                 }
             </div>
             {(errMsg == "") || <div className={"text-red-500"}> {errMsg} </div>}
@@ -182,6 +195,7 @@ function YourAssetsSection() {
                                                     idx={idx + assetStart}
                                                     setAssetSel={setAssetSel}
                                                     highlighted={assetSel === secretString}
+                                                    contract={contract}
                                                 />
                                             </div>
                                         )
@@ -234,59 +248,68 @@ function DepositReceiveSection() {
 const KEYS_LOCALHOST_KEY = 'hurricane_keys';
 const ASSETS_LOCALHOST_KEY = 'hurricane_assets';
 
+enum AddRem {
+    Add,
+    Remove
+}
+
+type SecretUpdate = {
+    secret: Secret,
+    upd: AddRem
+}
+
 export default function Content() {
     const {data: signer, isError, isLoading} = useSigner();
 
-    const [keys, setKeys] = useState(
+    function saveToLocalhost(secrets: Secret[], localhostKey: string) {
+        localStorage.setItem(localhostKey, JSON.stringify(
+            secrets.map(secretToJson)
+        ));
+    }
+
+    function makeReducer(localhostKey: string) {
+        return (state: Secret[], action: SecretUpdate) => {
+            const {secret, upd} = action;
+            let res;
+            if (upd == AddRem.Add) {
+                res = [...state, secret];
+            } else {
+                res = state.splice(state.findIndex(s => s.secret.eq(secret.secret)), 1);
+            }
+            saveToLocalhost(res, localhostKey);
+            return res;
+        }
+    }
+
+    const [keys, updKeys] = useReducer(
+        makeReducer(KEYS_LOCALHOST_KEY),
         JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
-    function saveKeys(newKeys: Secret[]) {
-        localStorage.setItem(KEYS_LOCALHOST_KEY, JSON.stringify(
-            newKeys.map(secretToJson)
-        ));
-    }
-
-    const [assets, setAssets] = useState(
+    const [assets, updAssets] = useReducer(
+        makeReducer(ASSETS_LOCALHOST_KEY),
         JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
-    function saveAssets(newAssets: Secret[]) {
-        localStorage.setItem(ASSETS_LOCALHOST_KEY, JSON.stringify(
-            newAssets.map(secretToJson)
-        ));
+    function addKey(secret: Secret,) {
+        updKeys({secret, upd: AddRem.Add});
     }
 
-    function addKey(newKey: Secret,) {
-        const newKeys = [...keys, newKey];
-        saveKeys(newKeys);
-        setKeys(newKeys);
+    function addAsset(secret: Secret,) {
+        updAssets({secret, upd: AddRem.Add});
     }
 
-    function addAsset(newAsset: Secret,) {
-        const newAssets = [...assets, newAsset];
-        saveAssets(newAssets);
-        setAssets(newAssets);
+    function removeKey(secret: Secret) {
+        updKeys({secret, upd: AddRem.Remove});
     }
 
-    function removeKey(idx: number) {
-        const newKeys = [...keys];
-        newKeys.splice(idx, 1);
-        saveKeys(newKeys);
-        setKeys(newKeys);
+    function removeAsset(secret: Secret) {
+        updAssets({secret, upd: AddRem.Remove});
     }
 
-    function removeAsset(idx: number) {
-        const newAssets = [...assets];
-        newAssets.splice(idx, 1);
-        saveAssets(newAssets);
-        setAssets(newAssets);
-    }
-
-    function updateStatus(idx: number) {
-        const newSecret = keys[idx];
-        removeKey(idx);
-        addAsset(newSecret);
+    function updateStatus(secret: Secret) {
+        removeKey(secret);
+        addAsset(secret);
     }
 
     return (

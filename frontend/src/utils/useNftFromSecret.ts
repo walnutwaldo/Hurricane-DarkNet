@@ -1,5 +1,5 @@
 import {BigNumber, Contract} from "ethers";
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useNetwork, useSigner} from "wagmi";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES, NFT_ABI} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
@@ -21,7 +21,7 @@ export function useNftFromSecret(secret: {
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
-    useEffect(() => {
+    const refresh = useCallback(() => {
         if (secret) {
             const pubKey = mimc(secret.secret, "0");
             contract.dataForPubkey(pubKey).then((maskedData: [BigNumber, BigNumber]) => {
@@ -37,7 +37,11 @@ export function useNftFromSecret(secret: {
                 });
             })
         }
+    }, [secret])
+
+    useEffect(() => {
+        refresh()
     }, [secret]);
 
-    return { nftContract, nftInfo, tokenAddress, tokenId };
+    return { nftContract, nftInfo, tokenAddress, tokenId, refresh };
 }
