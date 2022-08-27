@@ -30,7 +30,7 @@ export function TransferSection(props: any) {
     const currentSecret = secretContext.assets[idx];
     const [receiverShared, setReceiverShared] = useState<any>(undefined);
 
-    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
+    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(currentSecret);
 
     function updateShared() {
         try {
@@ -142,7 +142,7 @@ export function TransferSection(props: any) {
             console.log(err);
             setErrMsg("Transfer failed (possibly secret already taken)");
             setIsTransferring(false);
-			setExportState("Exporting");
+            setExportState("Exporting");
             setIsPreparingTxn(false);
         });
         console.log("transfer pending");
@@ -150,63 +150,63 @@ export function TransferSection(props: any) {
         const result = await tx.wait();
         if (!result?.status) {
             setErrMsg("Transfer failed (possibly secret already taken)");
-        } 
+        }
         setIsTransferring(false);
         setProof(undefined);
-		setExportState("Exporting");
-		if (result?.status) {
+        setExportState("Exporting");
+        if (result?.status) {
             console.log("transfer success");
-			rm!(idx);
-			setAssetSel!(-1);
-		}
+            rm!(idx);
+            setAssetSel!(-1);
+        }
     }
 
     return (
-        <div >
-            <div className="flex flex-row gap-2">
-                {expanded && (<>
-               		<label>Receiver's shared key:</label>
-                    <input
-                       	type="text"
-                      	name="sharedTextbox"
-                     	ref={shRef}
-                     	className={"ml-1 w-1/5 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
-                     	onChange={updateShared}
-             		/><br/>
-                    <SecondaryButton
-                     	type="submit"
-                	    onClick={() => {
-							setExportState("Exporting");
-                          	setIsTransferring(false);
-                         	setIsExpanded(false);
+        <div className={"flex flex-col gap-1"}>
+            {expanded && <div className="flex flex-row gap-2 w-full">
+                <input
+                    type="text"
+                    name="sharedTextbox"
+                    placeholder={"Receiver's shared key"}
+                    ref={shRef}
+                    className={"flex-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
+                    onChange={updateShared}
+                />
+                <button
+                    type="submit"
+                    className = {"outline-none bg-zinc-400 disabled:opacity-50 text-white rounded-md px-1 transition hover:scale-105"}
+                    onClick={() => {
+                        setExportState("Exporting");
+                        setIsTransferring(false);
+                        setIsExpanded(false);
                     }}>
-                      	Cancel
-                   	</SecondaryButton>
-				</>)}
-
-                <PrimaryButton type="submit" onClick={() => {
-                    if (expanded && receiverShared) {
-                		setErrMsg("");
-                       	setGeneratingProof(true);
-                     	runProof(receiverShared).then((proofRes) => {
-                        	setGeneratingProof(false);
-                           	makeTransfer(proofRes, receiverShared).then();
-                         	setIsExpanded(false);
-                      	})
-             		} else {
-                		setErrMsg("");
-						setExportState("Transferring");
-                      	setIsExpanded(true);
-                  	}
-        		}} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
-                  	{ isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
-              	</PrimaryButton>
-                <div>
-                    {
-                        expanded && (generatingProof && <span>Generating Proof <InlineLoader/></span>)
-                    }
-                </div>
+                    Cancel
+                </button>
             </div>
+            }
+            <SecondaryButton
+                type="submit"
+                onClick={() => {
+                    if (expanded && receiverShared) {
+                        setErrMsg("");
+                        setGeneratingProof(true);
+                        runProof(receiverShared).then((proofRes) => {
+                            setGeneratingProof(false);
+                            makeTransfer(proofRes, receiverShared).then();
+                            setIsExpanded(false);
+                        })
+                    } else {
+                        setErrMsg("");
+                        setExportState("Transferring");
+                        setIsExpanded(true);
+                    }
+                }}
+                disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}
+                className={"w-full"}
+            >
+                {isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
+            </SecondaryButton>
+            {expanded && generatingProof && <span>Generating Proof <InlineLoader/></span>}
         </div>
     )
 }

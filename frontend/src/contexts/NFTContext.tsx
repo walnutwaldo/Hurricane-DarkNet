@@ -47,7 +47,7 @@ export default function NFTProvider(props: any) {
                 // Print all NFTs returned in the response:
                 signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
                     setNFTs(res.ownedNfts);
-                    // console.log(res);
+                    console.log(res);
                     // console.log(JSON.stringify(res));
                     setLoadingNFTs(false);
                 }));

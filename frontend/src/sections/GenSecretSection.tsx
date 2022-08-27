@@ -21,7 +21,6 @@ function KeyDisplay(props: any) {
             setRefreshing(false);
             return;
         }
-        console.log("leafIdx", leafIdx);
 
         const maskedData = await contract.dataForPubkey(secret.shared);
         const {tokenAddress, tokenId} = unmaskTokenData(maskedData, secret);
@@ -43,13 +42,7 @@ function KeyDisplay(props: any) {
     }, [contract]);
 
     return (
-        <div className={"flex flex-row gap-3 text-white"}>
-            <AlertButton onClick={() => {
-                removeKey!(idx);
-            }}>
-                Delete
-            </AlertButton>
-            <label><b>Shared key:</b></label>
+        <div className={"flex flex-row gap-3 text-white max-w-full"}>
             <SecondaryButton onClick={() => {
                 // Copy secret.toHexString() to clipboard
                 navigator.clipboard.writeText(secretToSharedKey(secret));
@@ -58,14 +51,19 @@ function KeyDisplay(props: any) {
                     setEnableSharedCopy(true);
                 }, 1000);
             }} disabled={!enableSharedCopy}>
-                {enableSharedCopy ? "Copy" : "Copied!"}
+                {enableSharedCopy ? "Copy Key" : "Copied!"}
             </SecondaryButton>
-            <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-               	{secretToSharedKey(secret).substr(0, 6) + "..."}
+            <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono flex-1 text-ellipsis overflow-hidden min-w-0"}>
+               	{secretToSharedKey(secret)}
            	</span>
             <SecondaryButton onClick={refresh} disabled={refreshing}>
                 Refresh Status
             </SecondaryButton>
+            <AlertButton onClick={() => {
+                removeKey!(idx);
+            }}>
+                Delete
+            </AlertButton>
         </div>
     )
 }
@@ -82,13 +80,13 @@ function YourKeysSection() {
         <div>
             {keys.length == 0 ? "No outgoing requests." : <>
                 <h3 className={"text-lg text-lightgreen font-bold"}>
-                    YOUR REQUESTS
+                    Your Requests
                 </h3>
                 <div className={"flex flex-col gap-2"}>
                     {
                         keys.map(function (secret, idx) {
                             return (
-                                <div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg"}>
+                                <div key={secret.shared.toString()} className={"bg-stone-100 p-2 rounded-lg"}>
                                     <div className="flex flex-row justify-between">
                                         {/*<span className={"text-white"}></span>*/}
                                         <KeyDisplay secret={secret} idx={idx} contract={contract}/>
@@ -115,18 +113,21 @@ export function GenerateSecretSection() {
     const [enableCopy, setEnableCopy] = useState(true);
 
     return (<div>
-        <h3 className={"text-lg text-lightgreen font-bold"}>
+        <h3 className={"text-lg text-lightgreen font-bold mb-2"}>
             RECEIVE ASSETS
         </h3>
-        <div className="flex flex-row gap-2">
-            <PrimaryButton onClick={async () => {
-                addKey!(generateSecret());
-            }}>
+        <div className="flex flex-row gap-1">
+            <PrimaryButton
+                onClick={async () => {
+                    addKey!(generateSecret());
+                }}
+                className={"w-full py-2"}
+            >
                 Generate Receive Key
             </PrimaryButton>
         </div>
         {
-            keys.length == 0 ? <></> : <div className="pt-6">
+            keys.length == 0 ? <></> : <div className="pt-2">
                 <YourKeysSection/>
             </div>
         }

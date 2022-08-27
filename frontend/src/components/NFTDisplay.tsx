@@ -3,7 +3,7 @@ import React from "react";
 export function NFTDisplay(props: any) {
     const {nft} = props;
 
-    const url = nft.media[0]?.gateway || nft.media[0]?.raw || "";
+    const url = nft.media[0]?.raw || nft.media[0]?.gateway || "";
 
     return (
         <div className={

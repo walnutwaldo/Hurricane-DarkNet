@@ -36,7 +36,7 @@ function AssetDisplay(props: any) {
 
     return (
         <div className={"gap-1 text-stone-200"}>
-            <div className={"grid grid-cols-3 pb-1"}>
+            <div className={"grid grid-cols-3 pb-1 relative"}>
                 <div>
                 </div>
                 <div className={"grid justify-center text-center courier-new"}>
@@ -45,7 +45,7 @@ function AssetDisplay(props: any) {
                     </b></label>
                 </div>
                 <div className={"grid justify-end text-right hover:cursor-pointer hover:text-white"}>
-                    <div className="relative inline-block text-left">
+                    <div className="inline-block text-left">
                         {
                             highlighted ? (
                                 (exportState == "Exporting") && <span onClick={() => {
@@ -63,7 +63,7 @@ function AssetDisplay(props: any) {
                             showDropdown && (
                                 <div
                                     className={
-                                        "origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-stone-100" +
+                                        "origin-top-right absolute right-0 left-0 mt-2 rounded-md shadow-lg bg-stone-100" +
                                         " opacity-95 ring-1 ring-black ring-opacity-5 focus:outline-none"
                                     }
                                     role="menu" aria-orientation="vertical" aria-labelledby="menu-button">
@@ -102,7 +102,10 @@ function AssetDisplay(props: any) {
                 <img className="rounded-md" alt={nftInfo.title} src={nftInfo.image} width={600}/>
                 : <img className="rounded-md" alt={"Loading NFT Image"} src={"loading.jpg"} width={600}/>
             }
-            {highlighted && <div className={"flex flex-row gap-1 text-white pt-1"}>
+            <div className={
+                "grid gap-2 text-white pt-1"
+                + (exportState === "Exporting" ? " grid-cols-2" : " grid-cols-1")
+            }>
                 {((exportState == "Exporting") || (exportState == "Withdrawing")) &&
                     <WithdrawSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
                                      setExportState={setExportState}/>
@@ -111,7 +114,7 @@ function AssetDisplay(props: any) {
                     <TransferSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg}
                                      setExportState={setExportState}/>
                 }
-            </div>}
+            </div>
             {(errMsg == "") || <div className={"text-red-500"}> {errMsg} </div>}
         </div>
     )
@@ -163,7 +166,7 @@ function YourAssetsSection() {
                         {/*</PrimaryButton>*/}
                     </div>
                     {
-                        <div className={"overflow-x-auto"}>
+                        <div className={"overflow-x-auto pb-2"}>
                             <div className={"flex flex-row gap-2 pt-2 h-full shrink-0"}>
                                 {
                                     assets.map(function (secret, idx) {
