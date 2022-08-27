@@ -10,6 +10,7 @@ import {
 import mimc from "../crypto/mimc";
 import InlineLoader from "../components/InlineLoader";
 import {useNftFromSecret} from "../utils/useNftFromSecret";
+import {NFTContext} from "../contexts/NFTContext";
 
 // @ts-ignore
 const {groth16, zKey} = snarkjs;
@@ -29,6 +30,8 @@ export function WithdrawSection(props: any) {
 
     const sRef = useRef<HTMLInputElement>(null);
     const currentSecret = secretContext!.assets[idx];
+
+    const { refreshNFTs } = useContext(NFTContext);
 
     const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
 
@@ -140,6 +143,7 @@ export function WithdrawSection(props: any) {
         	rm!(idx);
 			setAssetSel!(-1);
 		}
+        refreshNFTs().then();
     }
 
     return (

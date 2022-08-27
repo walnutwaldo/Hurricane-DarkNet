@@ -10,6 +10,7 @@ import {
 } from "../contracts/deployInfo";
 import InlineLoader from "../components/InlineLoader";
 import NFTSection from "./NFTSection";
+import {NFTContext} from "../contexts/NFTContext";
 
 export function DepositSection() {
     const {chain, chains} = useNetwork()
@@ -24,10 +25,11 @@ export function DepositSection() {
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
     const [depositErrMsg, setDepositErrMsg] = useState("");
 
-    const [nfts, setNFTs] = useState([]);
     const [nftIdx, setNftIdx] = useState<number>(-1);
 
     const {addAsset} = useContext(SecretContext);
+
+    const {nfts, refreshNFTs} = useContext(NFTContext);
 
     const nft: any = nftIdx === -1 ? undefined : nfts[nftIdx];
 
@@ -108,6 +110,7 @@ export function DepositSection() {
         console.log("deposit result:", result);
         setIsPreparingTxn(false);
         setIsDepositing(false);
+        refreshNFTs().then();
     }
 
     return (
@@ -150,7 +153,7 @@ export function DepositSection() {
                     </span>
                 </div>
                 <div className="pt-2">
-                    <NFTSection nftIdx={nftIdx} setNftIdx={setNftIdx} nfts={nfts} setNFTs={setNFTs}/>
+                    <NFTSection nftIdx={nftIdx} setNftIdx={setNftIdx}/>
                 </div>
             </div>
         </div>

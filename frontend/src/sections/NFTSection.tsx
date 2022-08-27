@@ -1,70 +1,18 @@
 // Setup: npm install alchemy-sdk
 // Github: https://github.com/alchemyplatform/alchemy-sdk-js
-import {Network, Alchemy} from "alchemy-sdk";
-import React from "react";
+import React, {useCallback, useContext, useRef} from "react";
 import {useEffect, useState} from "react";
-import {useNetwork, useSigner} from "wagmi";
 import InlineLoaderFast from "../components/InlineLoaderFast";
 import {PrimaryButton} from "../components/buttons";
 import {NFTDisplay} from "../components/NFTDisplay";
-
-const NETWORK_TO_CHAIN = {
-    'goerli': Network.ETH_GOERLI,
-    "ethereum": Network.ETH_MAINNET
-}
-
-const NFT_ADDRESS_HARDCODED = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+import {NFTContext} from "../contexts/NFTContext";
 
 export default function NFTSection(props: any) {
-    const {nftIdx, setNftIdx, nfts, setNFTs} = props;
+    const {nfts, loadingNFTs} = useContext(NFTContext);
 
-    const {data: signer} = useSigner();
-    const {chain} = useNetwork()
-    const networkName = chain && chain.name && chain.name.toLowerCase();
-    console.log("network name", networkName);
+    const {nftIdx, setNftIdx} = props;
 
-    const [loadingNFTs, setLoadingNFTs] = useState(true);
     const [nftStart, setNFTStart] = useState(0);
-
-    useEffect(() => {
-        if (signer && networkName) {
-            setNFTs([]);
-            setLoadingNFTs(true);
-            if (NETWORK_TO_CHAIN[networkName]) {
-                const settings = {
-                    apiKey: process.env.ALCHEMY_KEY,
-                    network: NETWORK_TO_CHAIN[networkName]
-                };
-                const alchemy = new Alchemy(settings);
-
-                // Print all NFTs returned in the response:
-                signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
-                    setNFTs(res.ownedNfts);
-                    console.log(res);
-                    console.log(JSON.stringify(res));
-                    setLoadingNFTs(false);
-                }));
-            } else {
-                const arr = [];
-                for (let i = 0; i < 5; i++) {
-                    arr.push({
-                        tokenId: i.toString(),
-                        contract: {
-                            address: NFT_ADDRESS_HARDCODED
-                        },
-                        title: "Fake Azuki #" + i,
-                        media: [
-                            {
-                                gateway: `https://ikzttp.mypinata.cloud/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/${i}.png`
-                            }
-                        ]
-                    })
-                }
-                setNFTs(arr);
-            }
-            setLoadingNFTs(false);
-        }
-    }, [signer, networkName]);
 
     return (
         <div>
@@ -96,6 +44,7 @@ export default function NFTSection(props: any) {
                     nfts.slice(nftStart, nftStart + 3).map((nft: any, idx: number) => {
                         return (
                             <button
+                                key={idx}
                                 onClick={() => {
                                     setNftIdx(idx + nftStart);
                                 }}
