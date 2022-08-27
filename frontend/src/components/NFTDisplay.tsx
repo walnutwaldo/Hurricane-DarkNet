@@ -12,7 +12,7 @@ export function NFTDisplay(props: any) {
         }>
             <h4>{nft.title}</h4>
             <div className={"pb-1"}>
-                <img className="rounded-md" alt={nft.title} src={url} width={250}/>
+                <img className="rounded-md" alt={nft.title} src={url} width={300}/>
             </div>
         </div>
     )

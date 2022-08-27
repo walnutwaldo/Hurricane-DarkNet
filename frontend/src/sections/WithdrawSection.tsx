@@ -16,7 +16,7 @@ const {groth16, zKey} = snarkjs;
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 export function WithdrawSection(props: any) {
-    const {idx, rm} = props
+    const {idx, rm, setAssetSel, setErrMsg, setExportState} = props
     const {chain, chains} = useNetwork()
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
@@ -96,7 +96,6 @@ export function WithdrawSection(props: any) {
     }
 
     const [isWithdrawing, setIsWithdrawing] = useState(false);
-    const [withdrawErrMsg, setWithdrawErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeWithdrawal(proofRes: any) {
@@ -124,26 +123,30 @@ export function WithdrawSection(props: any) {
             rootIdx,
         ).catch((err: any) => {
             console.log(err);
-            setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
+            setErrMsg?.("Withdraw failed (possibly secret already taken)");
+			setExportState("Exporting");
             setIsWithdrawing(false);
             setIsPreparingTxn(false);
         });
         setIsPreparingTxn(false);
         let result = await tx.wait(); // dis
         if (!result?.status) {
-            setWithdrawErrMsg("Withdraw failed (possibly secret already taken)");
+            setErrMsg?.("Withdraw failed (transaction not approved)");
         }
+		setExportState("Exporting");
         setIsWithdrawing(false);
         setProof(undefined);
-        rm!(idx);
+		if (result?.status) {
+        	rm!(idx);
+			setAssetSel!(-1);
+		}
     }
 
     return (
-        <div className={""}>
-            <h3 className={"text-lg text-white font-bold"}>
-            </h3>
-            <PrimaryButton type="submit" onClick={() => {
-                setWithdrawErrMsg("");
+        <div className={"flex flex-row gap-1"}>
+            <PrimaryButton type="submit" onClick={() => {	
+                setErrMsg("");
+				setExportState("Withdrawing");
                 setGeneratingProof(true);
                 runProof(currentSecret).then((proofRes) => {
                     setGeneratingProof(false);
@@ -155,25 +158,13 @@ export function WithdrawSection(props: any) {
             </PrimaryButton>
             <div>
                 </div>
-                <div className={"text-red-500"}>{withdrawErrMsg}</div>
                 <div>
                     {
-                        generatingProof ? (
-                            <span>Generating Proof <InlineLoader/></span>
-                        ) : (
-                            <div>
-                                {
-                                    proof && (<>
-                                        Proof
-                                        <div
-                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 h-72 overflow-y-scroll whitespace-pre-wrap"}>
-                                            {JSON.stringify(proof, null, 2)}
-                                        </div>
-                                    </>)
-                                }
-                            </div>
-                        )
-                    }
+                        generatingProof && <span>Generating Proof <InlineLoader/></span>
+					}
+					{
+						(isWithdrawing && !generatingProof) && <span>Proof generated!</span>
+					}
                 </div>
             </div>
     )
