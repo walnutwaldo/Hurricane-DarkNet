@@ -7,7 +7,7 @@ export function PrimaryButton(props: any) {
         <button className={
             className +
             " outline-none bg-lightgreen disabled:opacity-75 text-darkgreen rounded-md px-1 transition" +
-            " enabled:hover:scale-105 font-bold"
+            " enabled:hover:brightness-95 font-bold"
         } onClick={onClick} disabled={disabled}>
             {children}
         </button>
@@ -20,7 +20,7 @@ export function SecondaryButton(props: any) {
     return (
         <button className={
             className + " outline-none bg-stone-200 disabled:opacity-50 text-stone-800 rounded-md px-1 transition" +
-            " enabled:hover:scale-105 font-bold"
+            " enabled:hover:brightness-95 font-bold"
         } onClick={onClick} disabled={disabled}>
             {children}
         </button>
@@ -35,7 +35,7 @@ export function TabButton(props: any) {
         <button className={
             className +
             " outline-none bg-lightgreen disabled:border-4 disabled:border-darkgreen text-darkgreen rounded-xl px-1 transition" +
-            " enabled:hover:scale-105 font-semibold"
+            " enabled:hover:brightness-95 font-semibold"
         } onClick={onClick} disabled={disabled}>
             {children}
         </button>
@@ -47,8 +47,8 @@ export function AlertButton(props: any) {
 
     return (
         <button className={
-            "outline-none enabled:bg-red-500 disabled:bg-red-1000 text-black rounded-md px-1 transition" +
-            " enabled:hover:scale-105 font-bold"
+            "outline-none enabled:bg-red-300 disabled:bg-red-1000 text-black rounded-md px-1 transition" +
+            " enabled:hover:brightness-95 font-bold"
         } onClick={onClick} disabled={disabled}>
             {children}
         </button>

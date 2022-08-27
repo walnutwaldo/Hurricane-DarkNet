@@ -103,10 +103,9 @@ export function DepositSection() {
         });
         if (!result?.status) {
             setDepositErrMsg("Deposit failed");
+        } else {
+            setNftIdx(-1);
         }
-		else {
-			setNftIdx(-1);
-		}
         console.log("deposit result:", result);
         setIsPreparingTxn(false);
         setIsDepositing(false);
@@ -115,11 +114,11 @@ export function DepositSection() {
 
     return (
         <div>
-            <h3 className={"text-lg text-lightgreen font-bold"}>
+            <h3 className={"text-lg text-lightgreen font-bold mb-2"}>
                 DEPOSIT
             </h3>
             <div>
-                <div className="flex flex-row gap-2">
+                <div className="flex flex-col items-center gap-1">
                     <PrimaryButton onClick={async () => {
                         // first, generate
                         if (isApproved) {
@@ -131,26 +130,26 @@ export function DepositSection() {
                         } else {
                             approveNFT();
                         }
-                    }} disabled={isDepositing || isApproving || nftIdx === -1}>
+                    }} disabled={isDepositing || isApproving || nftIdx === -1}
+                                   className={"w-full py-2"}
+                    >
                         {nft ? (isApproved ? "Deposit " : "Approve ") + ` ${nft.title}` : 'Select an NFT'}
                     </PrimaryButton>
-                    <span className={"text-lightgreen"}>
-                        {isDepositing ? (isPreparingTxn ? (
-                            <span>
+                    {isDepositing ? (isPreparingTxn ? (
+                        <span>
                                 Preparing transaction <InlineLoader/>
                             </span>
-                        ) : (
-                            <span>
+                    ) : (
+                        <span>
                                 Depositing <InlineLoader/>
                             </span>
-                        )) : (
-                            isApproving && (
-                                <span>
+                    )) : (
+                        isApproving && (
+                            <span>
                                     Approving <InlineLoader/>
                                 </span>
-                            )
-                        )}
-                    </span>
+                        )
+                    )}
                 </div>
                 <div className="pt-2">
                     <NFTSection nftIdx={nftIdx} setNftIdx={setNftIdx}/>
