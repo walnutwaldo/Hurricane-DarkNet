@@ -166,7 +166,7 @@ function YourAssetsSection() {
                         {/*</PrimaryButton>*/}
                     </div>
                     {
-                        <div className={"overflow-x-scroll pb-2"}>
+                        <div className={"overflow-x-auto pb-2"}>
                             <div className={"flex flex-row gap-2 pt-2 h-full shrink-0"}>
                                 {
                                     assets.map(function (secret, idx) {

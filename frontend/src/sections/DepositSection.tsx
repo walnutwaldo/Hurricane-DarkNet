@@ -27,7 +27,7 @@ export function DepositSection() {
 
     const [nftIdx, setNftIdx] = useState<number>(-1);
 
-    const {addAsset} = useContext(SecretContext);
+    const {addAsset, assets, removeAsset} = useContext(SecretContext);
 
     const {nfts, refreshNFTs} = useContext(NFTContext);
 
@@ -96,13 +96,17 @@ export function DepositSection() {
         });
         console.log("deposit tx:", tx);
         setIsPreparingTxn(false);
+		const add_position = assets.length;
+        addAsset!(secret);
         const result = await tx.wait().catch((resErr: any) => {
             console.log("txWaitErr", resErr);
             setIsDepositing(false);
             setDepositErrMsg("Deposit failed");
+			removeAsset!(add_position);
         });
         if (!result?.status) {
             setDepositErrMsg("Deposit failed");
+			removeAsset!(add_position);
         } else {
             setNftIdx(-1);
         }
@@ -126,7 +130,6 @@ export function DepositSection() {
                             const secret = generateSecret();
                             console.log("nft", nft);
                             await makeDeposit(secret, nftAddress, nftId);
-                            addAsset!(secret);
                         } else {
                             approveNFT();
                         }
