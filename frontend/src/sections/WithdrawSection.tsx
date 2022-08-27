@@ -1,7 +1,7 @@
 import React, {useContext, useRef, useState} from "react";
 import SecretContext from "../contexts/SecretContext";
 import {useNetwork, useSigner} from "wagmi";
-import {PrimaryButton} from "../components/buttons";
+import {PrimaryButton, SecondaryButton} from "../components/buttons";
 import {BigNumber, Contract} from "ethers";
 import {
     HURRICANE_CONTRACT_ABI,
@@ -31,9 +31,9 @@ export function WithdrawSection(props: any) {
     const sRef = useRef<HTMLInputElement>(null);
     const currentSecret = secretContext!.assets[idx];
 
-    const { refreshNFTs } = useContext(NFTContext);
+    const {refreshNFTs} = useContext(NFTContext);
 
-    const { nftContract, nftInfo, tokenAddress, tokenId } = useNftFromSecret(currentSecret);
+    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(currentSecret);
 
     const [proof, setProof] = useState<{
         pi_a: [string, string],
@@ -127,7 +127,7 @@ export function WithdrawSection(props: any) {
         ).catch((err: any) => {
             console.log(err);
             setErrMsg?.("Withdraw failed (possibly secret already taken)");
-			setExportState("Exporting");
+            setExportState("Exporting");
             setIsWithdrawing(false);
             setIsPreparingTxn(false);
         });
@@ -136,40 +136,39 @@ export function WithdrawSection(props: any) {
         if (!result?.status) {
             setErrMsg?.("Withdraw failed (transaction not approved)");
         }
-		setExportState("Exporting");
+        setExportState("Exporting");
         setIsWithdrawing(false);
         setProof(undefined);
-		if (result?.status) {
-        	rm!(idx);
-			setAssetSel!(-1);
-		}
+        if (result?.status) {
+            rm!(idx);
+            setAssetSel!(-1);
+        }
         refreshNFTs().then();
     }
 
     return (
-        <div className={"flex flex-row gap-1"}>
-            <PrimaryButton type="submit" onClick={() => {	
-                setErrMsg("");
-				setExportState("Withdrawing");
-                setGeneratingProof(true);
-                runProof(currentSecret).then((proofRes) => {
-                    setGeneratingProof(false);
-                    makeWithdrawal(proofRes).then();
-                })
-                
-                }} disabled={generatingProof || isWithdrawing}>
-                {isWithdrawing ? <span>Withdrawing<InlineLoader/></span> : "Withdraw"}
-            </PrimaryButton>
-            <div>
-                </div>
-                <div>
+        <div className={"flex flex-row justify-around gap-1 w-full"}>
+            {
+                !(generatingProof || isWithdrawing) && <SecondaryButton type="submit" onClick={() => {
+                    setErrMsg("");
+                    setExportState("Withdrawing");
+                    setGeneratingProof(true);
+                    runProof(currentSecret).then((proofRes) => {
+                        setGeneratingProof(false);
+                        makeWithdrawal(proofRes).then();
+                    })
+
+                }} className={"w-full"}>
+                    Withdraw
+                </SecondaryButton>
+            }
+            {
+                (generatingProof || isWithdrawing) && <span>
                     {
-                        generatingProof && <span>Generating Proof <InlineLoader/></span>
-					}
-					{
-						(isWithdrawing && !generatingProof) && <span>Proof generated!</span>
-					}
-                </div>
-            </div>
+                        generatingProof ? "Generating proof" : "Withdrawing"
+                    } <InlineLoader/>
+                </span>
+            }
+        </div>
     )
 }

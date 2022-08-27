@@ -19,12 +19,13 @@ export function SecondaryButton(props: any) {
 
     return (
         <button className={
-            className + " outline-none bg-zinc-400 disabled:opacity-50 text-white rounded-md px-1 transition" +
+            className + " outline-none bg-stone-200 disabled:opacity-50 text-stone-800 rounded-md px-1 transition" +
             " enabled:hover:scale-105 font-bold"
         } onClick={onClick} disabled={disabled}>
             {children}
         </button>
     )
+
 }
 
 export function TabButton(props: any) {
