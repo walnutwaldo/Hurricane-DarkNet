@@ -90,6 +90,8 @@ export default function NFTProvider(props: any) {
         autoRefreshNFTs().then();
     }, [autoRefreshNFTs]);
 
+    // console.log("nfts", nfts);
+
     return (
         <NFTContext.Provider value={{
             nfts,

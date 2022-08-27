@@ -7,6 +7,8 @@ import {PrimaryButton} from "../components/buttons";
 import {NFTDisplay} from "../components/NFTDisplay";
 import {NFTContext} from "../contexts/NFTContext";
 
+const PAGE_SIZE = 15;
+
 export default function NFTSection(props: any) {
     const {nfts, loadingNFTs} = useContext(NFTContext);
 
@@ -23,45 +25,50 @@ export default function NFTSection(props: any) {
 				</span>
                 </div>
                 {
-                    loadingNFTs || <>
+                    !loadingNFTs && (nfts.length > PAGE_SIZE) && <>
                         <PrimaryButton onClick={() => {
-                            setNFTStart(nftStart - 3);
+                            setNFTStart(nftStart - PAGE_SIZE);
                             setNftIdx(-1);
                         }} disabled={nftStart == 0}>
                             Back
                         </PrimaryButton>
                         <PrimaryButton onClick={() => {
-                            setNFTStart(nftStart + 3);
+                            setNFTStart(nftStart + PAGE_SIZE);
                             setNftIdx(-1);
-                        }} disabled={nftStart + 4 > nfts.length}>
+                        }} disabled={nftStart + PAGE_SIZE > nfts.length}>
                             Next
                         </PrimaryButton>
                     </>
                 }
             </div>
-            <div className={"gap-2 grid grid-cols-3 pt-2"}>
-                {
-                    nfts.slice(nftStart, nftStart + 3).map((nft: any, idx: number) => {
-                        return (
-                            <button
-                                key={idx}
-                                onClick={() => {
-                                    setNftIdx(idx + nftStart);
-                                }}
-                                disabled={nftIdx == idx + nftStart}
-                                className={
-                                    "rounded-md" +
-                                    " " +
-                                    (nftIdx === nftStart + idx ? "border-lightgreen shadow-md" : "hover:scale-105") +
-                                    " " +
-                                    (nftIdx !== -1 && (nftIdx !== nftStart + idx) && "opacity-75")
-                                }
-                            >
-                                <NFTDisplay nft={nft}/>
-                            </button>
-                        )
-                    })
-                }
+            <div className="overflow-x-scroll w-full pt-2">
+                <div className={"flex flex-row gap-3 pt-2 pr-2"}>
+                    {
+                        nfts.slice(nftStart, nftStart + PAGE_SIZE).map((nft: any, idxOffset: number) => {
+                            const idx = idxOffset + nftStart;
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => {
+                                        setNftIdx(idx);
+                                    }}
+                                    disabled={nftIdx == idx}
+                                    className={
+                                        "rounded-md shrink-0 w-1/4" +
+                                        " " +
+                                        (nftIdx === idx ? "border-lightgreen shadow-md" : "hover:scale-95") +
+                                        " " +
+                                        (nftIdx !== -1 && (nftIdx !== idx) && "opacity-75")
+                                        // + " " +
+                                        // ((idx < nftStart || idx >= nftStart + PAGE_SIZE) ? "hidden" : "")
+                                    }
+                                >
+                                    <NFTDisplay nft={nft}/>
+                                </button>
+                            )
+                        })
+                    }
+                </div>
             </div>
         </div>
     )

@@ -11,6 +11,7 @@ import {ConnectButton} from '@rainbow-me/rainbowkit';
 import {AlertButton, PrimaryButton, SecondaryButton, TabButton} from "./components/buttons";
 import {useNftFromSecret} from "./utils/useNftFromSecret";
 import NFTProvider from "./contexts/NFTContext";
+import {MoreVertical} from "react-feather";
 
 function AssetDisplay(props: any) {
     const {removeAsset, updateStatus} = useContext(SecretContext);
@@ -24,31 +25,31 @@ function AssetDisplay(props: any) {
 
     const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
 
+    const deleteButton = (
+        <AlertButton onClick={() => {
+            removeAsset!(idx);
+        }}>
+            Delete
+        </AlertButton>
+    )
+
     return (
-        <div className={"flex flex-col gap-1 text-white"}>
-            <div className={"flex flex-row justify-between pb-1 text-white"}>
-                <div>
-                    <AlertButton onClick={() => {
-                        removeAsset!(idx);
-                    }}>
-                        Delete
-                    </AlertButton>
-                </div>
-                <div className={"flex justify-center text-center"}>
+        <div className={"gap-1 text-stone-200"}>
+            <div className={"grid grid-cols-3 pb-1"}>
+                <div></div>
+                <div className={"grid justify-center text-center courier-new"}>
                     <label><b>
-                        {nftInfo?.name ? (highlighted ? exportState + " " + nftInfo?.name : nftInfo?.name) : "Loading NFT"}
+                        {nftInfo?.name || "Loading NFT"}
                     </b></label>
                 </div>
-                <div className={"flex justify-end"}>
-                    {highlighted ? ((exportState == "Exporting") && <SecondaryButton onClick={() => {
+                <div className={"grid justify-end text-right hover:cursor-pointer hover:text-white"}>
+                    {highlighted ? ((exportState == "Exporting") && <span onClick={() => {
                         setAssetSel(-1);
                     }}>
                         Cancel
-                    </SecondaryButton>) : <PrimaryButton onClick={() => {
+                    </span>) : <MoreVertical onClick={() => {
                         setAssetSel(idx);
-                    }}>
-                        Export
-                    </PrimaryButton>}
+                    }}/>}
                 </div>
             </div>
             {nftInfo?.image ?
@@ -109,7 +110,7 @@ function YourAssetsSection() {
     const [assetSel, setAssetSel] = useState(-1);
 
     return (
-        <div className={"h-full"}>
+        <div className={"h-full flex flex-col"}>
             {
                 assets.length == 0 ? (
                     <div className={"text-center my-auto"}>
@@ -119,7 +120,7 @@ function YourAssetsSection() {
                     <div className={"grid grid-cols-8 gap-2"}>
                         <div className={"col-span-6"}>
                             <h3 className={"text-lg text-black font-bold"}>
-                                YOUR ASSETS
+                                HURRICANE NETWORK ASSETS
                             </h3>
                         </div>
                         <PrimaryButton onClick={() => {
@@ -133,26 +134,32 @@ function YourAssetsSection() {
                             Next
                         </PrimaryButton>
                     </div> : <></>}
-                    {(assetSel == -1) ? <div className={"grid grid-cols-2 gap-2 pt-2 h-full basis-full"}>
-                        {
-                            assets.slice(assetStart, assetStart + 2).map(function (secret, idx) {
-                                return (
-                                    <div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg h-fit"}>
-                                        <div className="flex flex-row justify-between">
-                                            {/*<span className={"text-white"}></span>*/}
-                                            <AssetDisplay secret={secret} idx={idx + assetStart}
-                                                          setAssetSel={setAssetSel} highlighted={false}/>
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        }
-                    </div> : <div>
-                        <div className="bg-stone-800 p-2 rounded-lg h-fit">
-                            <AssetDisplay secret={assets[assetSel]} idx={assetSel} setAssetSel={setAssetSel}
-                                          highlighted={true}/>
+                    {
+                        <div className={"overflow-y-scroll min-h-0 flex-1"}>
+                            <div className={"grid grid-cols-2 gap-2 pt-2 h-full shrink-0"}>
+                                {
+                                    assets.map(function (secret, idx) {
+                                        return (
+                                            <div key={secret.shared.toString()}
+                                                 className={
+                                                     "bg-stone-800 p-2 rounded-lg h-fit"
+                                                     // + (idx < assetStart || idx >= assetStart + 2 ? " hidden" : "")
+                                                 }>
+                                                <div className="flex flex-row justify-between">
+                                                    <AssetDisplay
+                                                        secret={secret}
+                                                        idx={idx + assetStart}
+                                                        setAssetSel={setAssetSel}
+                                                        highlighted={assetSel === idx}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                }
+                            </div>
                         </div>
-                    </div>}
+                    }
                 </>
             }
         </div>
@@ -184,7 +191,7 @@ function DepositReceiveSection() {
             </div>
         </div>
         <div className="flex-1">
-            <div className="bg-darkgreen p-2 rounded-lg h-full">
+            <div className="bg-darkgreen p-3 rounded-lg h-full">
                 {
                     DRState == "" ? <></> :
                         (DRState == "deposit" ? <DepositSection/> : <GenerateSecretSection/>)

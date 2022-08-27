@@ -4,9 +4,9 @@ import {BigNumber} from "ethers";
 // Goerli Address: 0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D
 const NFT_ADDRESS = "0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D";
 
-const HURRICANE_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
-const NFT_IDS = ["0", "1", "2", "3", "4"];
+const HURRICANE_ADDRESS = "0x33d4e6Ff9ac999C6545a6b7fC3305898F3D72881";
+const USER_ADDRESS = "0x05521303316E6BCfE9AD287BD0C4e75d5B29cf46";
+const NFT_IDS = ["2705"];
 
 async function main() {
     const signers = await ethers.getSigners();
