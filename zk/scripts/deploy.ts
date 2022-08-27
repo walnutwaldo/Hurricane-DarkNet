@@ -14,18 +14,23 @@ async function main() {
     const signers = await ethers.getSigners();
     const signer = signers[0];
 
+    const gasOptions = {
+        gasPrice: ethers.utils.parseUnits("3", "gwei"),
+    }
+
     const Hasher = new ethers.ContractFactory(hasher.abi, hasher.bytecode, signer);
     const hasherGasEsimate = await ethers.provider.estimateGas(Hasher.getDeployTransaction());
     console.log("Hasher Gas Estimate:", hasherGasEsimate);
-    const hasherContract = await Hasher.deploy();
+    const hasherContract = await Hasher.deploy(gasOptions);
     console.log(`Deployed Hasher at ${hasherContract.address}`);
+    const hasherContractAddress = hasherContract.address;
+    // const hasherContractAddress = "0xC173fc0504322b9dA049E2e0439cF178D61d5728";
 
     const Hurricane = await ethers.getContractFactory("Hurricane");
-    const estimatedGas = await ethers.provider.estimateGas(Hurricane.getDeployTransaction(hasherContract.address));
+    console.log(Hurricane.getDeployTransaction(hasherContractAddress));
+    const estimatedGas = await ethers.provider.estimateGas(Hurricane.getDeployTransaction(hasherContractAddress));
     console.log("Hurricane Estimated Gas:", estimatedGas);
-
-    const contract = await Hurricane.deploy(hasherContract.address);
-
+    const contract = await Hurricane.deploy(hasherContractAddress, gasOptions);
     const contractAddress = contract.address;
     console.log(`Deployed Hurricane at ${contractAddress}`);
 

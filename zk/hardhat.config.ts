@@ -42,7 +42,11 @@ const config: HardhatUserConfig = {
     },
     networks: {
         goerli: {
-            url: process.env.ALCHEMY_URL,
+            url: process.env.ALCHEMY_GOERLI_URL,
+            accounts: [process.env.PRIVATE_KEY!]
+        },
+        mainnet: {
+            url: process.env.ALCHEMY_MAINNET_URL,
             accounts: [process.env.PRIVATE_KEY!]
         },
         hardhat: {

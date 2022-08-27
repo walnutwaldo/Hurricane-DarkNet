@@ -18,7 +18,7 @@ const MODULUS = BigNumber.from("218882428718392752222464057452572750885483644004
 
 export function WithdrawSection(props: any) {
     const {idx, removeAsset, setAssetSel, setErrMsg, setExportState, secret, tokenAddress, tokenId} = props
-    const {chain, chains} = useNetwork()
+    const {chain, chains} = useNetwork();
 
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
