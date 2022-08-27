@@ -21,7 +21,7 @@ export function TransferSection(props: any) {
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
 
     const [generatingProof, setGeneratingProof] = useState(false);
-
+    const [certain, setCertain] = useState(false);
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
@@ -183,7 +183,27 @@ export function TransferSection(props: any) {
                       	Cancel
                    	</SecondaryButton>
 				</>)}
-
+                {certain && (<>
+               		<label>Confirm Transaction</label>
+                    <SecondaryButton
+                     	type="submit"
+                	    onClick={() => {
+							setExportState("Exporting");
+                          	setIsTransferring(false);
+                         	setIsExpanded(true);
+                    }}>
+                      	Confirm
+                   	</SecondaryButton>
+                    <SecondaryButton
+                     	type="submit"
+                	    onClick={() => {
+							setExportState("Exporting");
+                          	setIsTransferring(false);
+                            setIsExpanded(false);
+                    }}>
+                      	Cancel
+                   	</SecondaryButton>
+				</>)}
                 <PrimaryButton type="submit" onClick={() => {
                     if (expanded && receiverShared) {
                 		setErrMsg("");
@@ -196,7 +216,7 @@ export function TransferSection(props: any) {
              		} else {
                 		setErrMsg("");
 						setExportState("Transferring");
-                      	setIsExpanded(true);
+                      	setCertain(true);
                   	}
         		}} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
                   	{ isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
