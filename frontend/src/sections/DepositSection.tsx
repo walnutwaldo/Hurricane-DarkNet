@@ -102,6 +102,9 @@ export function DepositSection() {
         if (!result?.status) {
             setDepositErrMsg("Deposit failed");
         }
+		else {
+			setNftIdx(-1);
+		}
         console.log("deposit result:", result);
         setIsPreparingTxn(false);
         setIsDepositing(false);

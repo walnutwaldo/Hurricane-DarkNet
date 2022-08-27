@@ -8,43 +8,79 @@ import {useNetwork, useSigner} from "wagmi";
 import {TransferSection} from "./sections/TransferSection";
 import {GenerateSecretSection} from "./sections/GenSecretSection";
 import {ConnectButton} from '@rainbow-me/rainbowkit';
-import {AlertButton, PrimaryButton, TabButton} from "./components/buttons";
+import {AlertButton, PrimaryButton, SecondaryButton, TabButton} from "./components/buttons";
 import {useNftFromSecret} from "./utils/useNftFromSecret";
 
 function AssetDisplay(props: any) {
     const {removeAsset, updateStatus} = useContext(SecretContext);
 
-    const {secret, idx} = props;
+    const {secret, idx, setAssetSel, highlighted} = props;
 
     const [enableSecretCopy, setEnableSecretCopy] = useState(true);
     const [enableExporting, setEnableExporting] = useState(true);
+	const [exportState, setExportState] = useState("Exporting");
+	const [errMsg, setErrMsg] = useState("");
 
     const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
 
     return (
-        <div className={"flex flex-row gap-3 text-white"}>
-            <AlertButton onClick={() => {
-                removeAsset!(idx);
-            }}>
-                Delete
-            </AlertButton>
-            <label><b>{nftInfo?.name || "unknown"}</b></label>
-            <WithdrawSection idx={idx} rm={removeAsset}/>
-            <TransferSection idx={idx} rm={removeAsset}/>
-            <PrimaryButton onClick={() => {
-                // Remove the secret
-                console.log("i am the secret", secret);
-                setEnableExporting(!enableExporting);
-                if (enableExporting) {
-                    navigator.clipboard.writeText(secret.secret!.toHexString());
-                }
-                return (<div></div>);
-            }}>
-                {enableExporting ? "Export Secret" : "Copy"}
-            </PrimaryButton>
-            {!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-             	{secret.secret!.toHexString().substr(0, 10) + "..."}
-            </span>}
+        <div className={"flex flex-col gap-1 text-white"}>
+        	<div className={"grid grid-cols-3 sep-3 pb-1 text-white"}>
+				<div>
+            		<AlertButton onClick={() => {
+                		removeAsset!(idx);
+            		}}>
+                		Delete
+            		</AlertButton>
+				</div>
+            	<div className={"flex justify-center"}>
+					<label><b>
+						{nftInfo?.name ? (highlighted ? exportState + " " + nftInfo?.name : nftInfo?.name) : "Loading NFT"}
+					</b></label>
+				</div>
+				<div className={"flex justify-end"}>
+					{ highlighted ? ( (exportState == "Exporting") && <SecondaryButton onClick={() => {
+						setAssetSel(-1);
+					}}>
+						Cancel
+					</SecondaryButton>) : <PrimaryButton onClick={() => {
+						setAssetSel(idx);
+					}}>
+						Export
+					</PrimaryButton> }
+				</div>
+			</div>
+			{ nftInfo?.image ? 
+				<img className="rounded-md" alt={nftInfo.title} src={nftInfo.image} width={600}/>
+				: <img className="rounded-md" alt={"Loading NFT Image"} src={"loading.jpg"} width={600}/>
+			}
+			{ highlighted && <div className={"flex flex-row gap-1 text-white pt-1"}>
+				{ ((exportState == "Exporting") || (exportState == "Withdrawing")) &&
+            		<WithdrawSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg} setExportState={setExportState}/>
+				}
+				{ ((exportState == "Exporting") || (exportState == "Transferring")) && 
+	            	<TransferSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg} setExportState={setExportState}/>
+				}
+				{ (exportState == "Exporting") && <>
+					<div className={"pr-2"}>
+            			<PrimaryButton onClick={() => {
+                			// Remove the secret
+                			console.log("i am the secret", secret);
+                			setEnableExporting(!enableExporting);
+                			if (enableExporting) {
+                    			navigator.clipboard.writeText(secret.secret!.toHexString());
+                			}
+                			return (<div></div>);
+            			}}>
+                			{enableExporting ? "Export Secret" : "Copy"}
+            			</PrimaryButton>
+					</div>
+            		{!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+             			{secret.secret!.toHexString().substr(0, 10) + "..."}
+            		</span>}
+				</>}
+			</div> }
+			{ (errMsg == "") ||	<div className={"text-red-500"}> {errMsg} </div>}
         </div>
     )
 }
@@ -61,40 +97,61 @@ export function DisplayExport(props: any) {
 function YourAssetsSection() {
     const {keys, assets} = useContext(SecretContext);
     const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : ""; 
 
     const {data: signer} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
+	const [assetStart, setAssetStart] = useState(0);
+	const [assetSel, setAssetSel] = useState(-1);
+
     return (
-        <div className={"h-full flex flex-col"}>
+        <div className={"h-full"}>
             {
-                assets.length == 0 ? (
+                assets.length == 0 ? ( 
                     <div className={"text-center my-auto"}>
                         You will find your assets here once you deposit into Hurricane.
                     </div>
-                ) : <>
-                    <h3 className={"text-lg text-black font-bold"}>
-                        YOUR ASSETS
-                    </h3>
-                    <div className={"flex flex-col gap-2"}>
-                        {
-                            assets.map(function (secret, idx) {
-                                return (
-                                    <div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg"}>
-                                        <div className="flex flex-row justify-between">
-                                            {/*<span className={"text-white"}></span>*/}
-                                            <AssetDisplay secret={secret} idx={idx}/>
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        }
-                    </div>
-                </>
+                ) : <> { (assetSel == -1) ? 
+						<div className={"grid grid-cols-8 gap-2"}>
+							<div className={"col-span-6"}>
+                    			<h3 className={"text-lg text-black font-bold"}>
+                        			YOUR ASSETS
+                    			</h3>
+							</div>
+							<PrimaryButton onClick={() => {
+                            	setAssetStart(assetStart - 2);
+                        	}} disabled={assetStart == 0}>
+                            	Back
+                        	</PrimaryButton>
+                        	<PrimaryButton onClick={() => {
+                            	setAssetStart(assetStart + 2);
+                        	}} disabled={assetStart + 3 > assets.length}>
+                           		Next
+                        	</PrimaryButton>
+						</div> : <></> }
+						{ (assetSel == -1) ? <div className={"grid grid-cols-2 gap-2 pt-2 h-full basis-full"}>
+                        	{
+                            	assets.slice(assetStart, assetStart+2).map(function (secret, idx) {
+                                	return (
+                                    	<div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg h-fit"}>
+                                        	<div className="flex flex-row justify-between">
+                                            	{/*<span className={"text-white"}></span>*/}
+                                            	<AssetDisplay secret={secret} idx={idx+assetStart} setAssetSel={setAssetSel} highlighted={false}/>
+                                        	</div>
+                                    	</div>
+                                	)
+                            	})
+                        	}
+                    	</div> : <div>
+							<div className="bg-stone-800 p-2 rounded-lg h-fit">
+								<AssetDisplay secret={assets[assetSel]} idx={assetSel} setAssetSel={setAssetSel} highlighted={true}/>
+							</div>
+						</div> }
+                	</>
             }
         </div>
-    )
+    )   
 }
 
 function DepositReceiveSection() {

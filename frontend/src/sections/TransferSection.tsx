@@ -15,7 +15,7 @@ import InlineLoader from "../components/InlineLoader";
 const {groth16, zKey} = snarkjs;
 
 export function TransferSection(props: any) {
-    const {idx, rm} = props
+    const {idx, rm, setAssetSel, setErrMsg, setExportState} = props
     const {chain, chains} = useNetwork();
     const secretContext = useContext(SecretContext);
     const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : "";
@@ -101,7 +101,6 @@ export function TransferSection(props: any) {
 
     const [expanded, setIsExpanded] = useState(false);
     const [isTransferring, setIsTransferring] = useState(false);
-    const [transferErrMsg, setTransferErrMsg] = useState("");
     const [isPreparingTxn, setIsPreparingTxn] = useState(false);
 
     async function makeTransfer(
@@ -141,84 +140,70 @@ export function TransferSection(props: any) {
             )
         ).catch((err: any) => {
             console.log(err);
-            setTransferErrMsg("Transfer failed (possibly secret already taken)");
+            setErrMsg("Transfer failed (possibly secret already taken)");
             setIsTransferring(false);
+			setExportState("Exporting");
             setIsPreparingTxn(false);
         });
         console.log("transfer pending");
         setIsPreparingTxn(false);
         const result = await tx.wait();
         if (!result?.status) {
-            setTransferErrMsg("Transfer failed (possibly secret already taken)");
-        } else {
-            console.log("transfer success");
-        }
+            setErrMsg("Transfer failed (possibly secret already taken)");
+        } 
         setIsTransferring(false);
         setProof(undefined);
+		setExportState("Exporting");
+		if (result?.status) {
+            console.log("transfer success");
+			rm!(idx);
+			setAssetSel!(-1);
+		}
     }
 
     return (
-        <div>
-            <h3 className={"text-lg text-black font-bold"}>
-            </h3>
-            <div>
-                {expanded && (
-                    <div>
-                        <label>Receiver's shared key:</label>
-                        <input
-                            type="text"
-                            name="sharedTextbox"
-                            ref={shRef}
-                            className={"ml-1 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
-                            onChange={updateShared}
-                        /><br/>
-                        <SecondaryButton
-                            type="submit"
-                            onClick={() => {
-                                setIsTransferring(false);
-                            }}
-                        >
-                            Cancel
-                        </SecondaryButton>
-                    </div>
-                )}
-                <div className={"text-red-500"}>{transferErrMsg}</div>
+        <div >
+            <div className="flex flex-row gap-2">
+                {expanded && (<>
+               		<label>Receiver's shared key:</label>
+                    <input
+                       	type="text"
+                      	name="sharedTextbox"
+                     	ref={shRef}
+                     	className={"ml-1 w-1/5 rounded-md text-black outline-none bg-slate-100 px-1 mb-1"}
+                     	onChange={updateShared}
+             		/><br/>
+                    <SecondaryButton
+                     	type="submit"
+                	    onClick={() => {
+							setExportState("Exporting");
+                          	setIsTransferring(false);
+                         	setIsExpanded(false);
+                    }}>
+                      	Cancel
+                   	</SecondaryButton>
+				</>)}
 
-                <div className="flex flex-row gap-2">
-                    <PrimaryButton type="submit" onClick={() => {
-                        if (expanded && receiverShared) {
-                            setTransferErrMsg("");
-                            setGeneratingProof(true);
-                            runProof(receiverShared).then((proofRes) => {
-                                setGeneratingProof(false);
-                                makeTransfer(proofRes, receiverShared).then();
-                                setIsExpanded(false);
-                            })
-                        } else {
-                            setIsExpanded(true);
-                        }
-                    }} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
-                        { isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
-                    </PrimaryButton>
-
-                </div>
+                <PrimaryButton type="submit" onClick={() => {
+                    if (expanded && receiverShared) {
+                		setErrMsg("");
+                       	setGeneratingProof(true);
+                     	runProof(receiverShared).then((proofRes) => {
+                        	setGeneratingProof(false);
+                           	makeTransfer(proofRes, receiverShared).then();
+                         	setIsExpanded(false);
+                      	})
+             		} else {
+                		setErrMsg("");
+						setExportState("Transferring");
+                      	setIsExpanded(true);
+                  	}
+        		}} disabled={expanded && (generatingProof || !nftInfo || !receiverShared || isTransferring)}>
+                  	{ isTransferring ? <span>Transferring<InlineLoader/></span> : "Transfer"}
+              	</PrimaryButton>
                 <div>
                     {
-                        generatingProof ? (
-                            <span>Generating Proof <InlineLoader/></span>
-                        ) : (
-                            <div>
-                                {
-                                    proof && (<>
-                                        Proof
-                                        <div
-                                            className={"p-2 rounded-md font-mono text-sm bg-gray-300 h-72 overflow-y-scroll whitespace-pre-wrap"}>
-                                            {JSON.stringify(proof, null, 2)}
-                                        </div>
-                                    </>)
-                                }
-                            </div>
-                        )
+                        expanded && (generatingProof && <span>Generating Proof <InlineLoader/></span>)
                     }
                 </div>
             </div>
