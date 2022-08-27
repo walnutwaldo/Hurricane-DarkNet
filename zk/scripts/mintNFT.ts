@@ -2,10 +2,10 @@ import {ethers} from "hardhat";
 import {BigNumber} from "ethers";
 
 // Goerli Address: 0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D
-const NFT_ADDRESS = "0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D";
+const NFT_ADDRESS = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 const USER_ADDRESS = "0xd84365dAd6e6dB6fa2d431992acB1e050789bE69";
-const NFT_IDS = ["1024"];
+const NFT_IDS = ["0", "1", "2", "3", "4", "5"];
 
 async function main() {
     const signers = await ethers.getSigners();

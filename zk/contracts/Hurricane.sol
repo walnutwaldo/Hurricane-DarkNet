@@ -14,6 +14,8 @@ interface IHasher {
 
 contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
 
+    event NewLeaf(uint indexed pubKey, uint indexed leaf);
+
     struct MaskedData {
         uint maskedAddress;
         uint maskedId;
@@ -113,6 +115,7 @@ contract Hurricane is ReentrancyGuard, Ownable, IERC721Receiver {
         }
 
         merkleRoots[++rootIndex] = getNode(30, 0);
+        emit NewLeaf(publicKey, leaf);
     }
 
     function calcLeaf(

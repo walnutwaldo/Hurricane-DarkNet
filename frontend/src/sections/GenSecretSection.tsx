@@ -1,12 +1,16 @@
-import {useNetwork, useSigner} from "wagmi";
+import {useNetwork, useProvider, useSigner} from "wagmi";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "../contracts/deployInfo";
-import {BigNumber, Contract} from "ethers";
+import {BigNumber, Contract, ethers} from "ethers";
 import React, {useContext, useEffect, useState} from "react";
 import SecretContext, {generateSecret, Secret, secretToSharedKey, unmaskTokenData} from "../contexts/SecretContext";
 import {AlertButton, PrimaryButton, SecondaryButton} from "../components/buttons";
+import {Check, Copy} from "react-feather";
+import {hexZeroPad} from "ethers/lib/utils";
 
 function KeyDisplay(props: any) {
     const {removeKey, updateStatus} = useContext(SecretContext);
+
+    const provider = useProvider()
 
     const {secret, idx, contract} = props;
 
@@ -39,31 +43,46 @@ function KeyDisplay(props: any) {
 
     useEffect(() => {
         refresh();
+        const filter = contract.filters.NewLeaf(hexZeroPad(secret.shared, 32));
+
+        const listener = (event: any) => {
+            console.log("New Leaf Event");
+            console.log(event);
+            refresh();
+        }
+
+        provider.on(filter, listener);
+
+        return () => { provider.off(filter, listener); };
     }, [contract]);
 
     return (
-        <div className={"flex flex-row gap-3 text-white max-w-full"}>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(secretToSharedKey(secret));
-                setEnableSharedCopy(false);
-                setTimeout(() => {
-                    setEnableSharedCopy(true);
-                }, 1000);
-            }} disabled={!enableSharedCopy}>
-                {enableSharedCopy ? "Copy Key" : "Copied!"}
-            </SecondaryButton>
-            <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono flex-1 text-ellipsis overflow-hidden min-w-0"}>
-               	{secretToSharedKey(secret)}
-           	</span>
-            <SecondaryButton onClick={refresh} disabled={refreshing}>
-                Refresh Status
-            </SecondaryButton>
-            <AlertButton onClick={() => {
-                removeKey!(idx);
-            }}>
-                Delete
-            </AlertButton>
+        <div className="flex flex-col gap-1">
+            <h3 className={"text-stone-200 font-semibold"}>
+                Give this Receive Key to the sender:
+            </h3>
+            <div className="flex flex-row gap-2 overflow-hidden">
+                <SecondaryButton onClick={() => {
+                    navigator.clipboard.writeText(secretToSharedKey(secret));
+                    setEnableSharedCopy(false);
+                    setTimeout(() => {
+                        setEnableSharedCopy(true);
+                    }, 1000);
+                }} className={""} disabled={!enableSharedCopy}>
+                    {enableSharedCopy ? <span>Copy</span> : <span>Copied!</span>}
+                </SecondaryButton>
+                <span
+                    className={"px-1 bg-stone-100 text-zinc-900 rounded-md font-mono flex-1 text-ellipsis overflow-hidden min-w-0"}>
+                    {secretToSharedKey(secret)}
+                </span>
+            </div>
+            <div className={"grid text-white max-w-full"}>
+                <SecondaryButton onClick={() => {
+                    removeKey!(idx);
+                }}>
+                    Cancel
+                </SecondaryButton>
+            </div>
         </div>
     )
 }
@@ -79,18 +98,12 @@ function YourKeysSection() {
     return (
         <div>
             {keys.length == 0 ? "No outgoing requests." : <>
-                <h3 className={"text-lg text-lightgreen font-bold"}>
-                    Your Requests
-                </h3>
                 <div className={"flex flex-col gap-2"}>
                     {
                         keys.map(function (secret, idx) {
                             return (
-                                <div key={secret.shared.toString()} className={"bg-stone-100 p-2 rounded-lg"}>
-                                    <div className="flex flex-row justify-between">
-                                        {/*<span className={"text-white"}></span>*/}
-                                        <KeyDisplay secret={secret} idx={idx} contract={contract}/>
-                                    </div>
+                                <div key={secret.shared.toString()}>
+                                    <KeyDisplay secret={secret} idx={idx} contract={contract}/>
                                 </div>
                             )
                         })

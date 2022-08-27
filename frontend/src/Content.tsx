@@ -36,10 +36,10 @@ function AssetDisplay(props: any) {
 
     return (
         <div className={"gap-1 text-stone-200"}>
-            <div className={"grid grid-cols-3 pb-1 relative"}>
+            <div className={"grid grid-cols-5 pb-1 relative"}>
                 <div>
                 </div>
-                <div className={"grid justify-center text-center courier-new"}>
+                <div className={"grid justify-center text-center courier-new col-span-3"}>
                     <label><b>
                         {nftInfo?.name || "Loading NFT"}
                     </b></label>

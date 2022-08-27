@@ -1,6 +1,8 @@
 import React, {createContext, useCallback, useEffect, useRef, useState} from "react";
 import {useNetwork, useSigner} from "wagmi";
 import {Alchemy, Network} from "alchemy-sdk";
+import {ethers} from "ethers";
+import {NFT_ABI} from "../contracts/deployInfo";
 
 type NFTContext = {
     nfts: any[],
@@ -19,7 +21,7 @@ const NETWORK_TO_CHAIN = {
     "ethereum": Network.ETH_MAINNET
 }
 
-const NFT_ADDRESS_HARDCODED = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const NFT_ADDRESS_HARDCODED = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 export default function NFTProvider(props: any) {
     const {children} = props;
@@ -52,20 +54,26 @@ export default function NFTProvider(props: any) {
                     setLoadingNFTs(false);
                 }));
             } else {
+                const contract = new ethers.Contract(NFT_ADDRESS_HARDCODED, NFT_ABI, signer);
+                const signerAddress = await signer.getAddress();
                 const arr = [];
                 for (let i = 0; i < 5; i++) {
-                    arr.push({
-                        tokenId: i.toString(),
-                        contract: {
-                            address: NFT_ADDRESS_HARDCODED
-                        },
-                        title: "Fake Azuki #" + i,
-                        media: [
-                            {
-                                gateway: `https://ikzttp.mypinata.cloud/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/${i}.png`
-                            }
-                        ]
-                    })
+                    const owner = (await contract.ownerOf(i.toString()).catch(() => ethers.constants.AddressZero));
+                    console.log("owner of ", i, ": ", owner);
+                    if (owner === signerAddress) {
+                        arr.push({
+                            tokenId: i.toString(),
+                            contract: {
+                                address: NFT_ADDRESS_HARDCODED
+                            },
+                            title: "Fake Azuki #" + i,
+                            media: [
+                                {
+                                    gateway: `https://ikzttp.mypinata.cloud/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/${i}.png`
+                                }
+                            ]
+                        })
+                    }
                 }
                 setNFTs(arr);
             }

@@ -136,18 +136,18 @@ export function DepositSection() {
                         {nft ? (isApproved ? "Deposit " : "Approve ") + ` ${nft.title}` : 'Select an NFT'}
                     </PrimaryButton>
                     {isDepositing ? (isPreparingTxn ? (
-                        <span>
-                                Preparing transaction <InlineLoader/>
-                            </span>
+                        <span className={"text-lightgreen"}>
+                            Preparing transaction <InlineLoader/>
+                        </span>
                     ) : (
-                        <span>
-                                Depositing <InlineLoader/>
-                            </span>
+                        <span className={"text-lightgreen"}>
+                            Depositing <InlineLoader/>
+                        </span>
                     )) : (
                         isApproving && (
-                            <span>
-                                    Approving <InlineLoader/>
-                                </span>
+                            <span className={"text-lightgreen"}>
+                                Approving <InlineLoader/>
+                            </span>
                         )
                     )}
                 </div>

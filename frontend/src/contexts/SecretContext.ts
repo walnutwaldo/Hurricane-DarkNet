@@ -1,6 +1,7 @@
 import {BigNumber} from "ethers";
 import React from "react";
 import mimc from "../crypto/mimc";
+import {hexZeroPad} from "ethers/lib/utils";
 
 const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
@@ -130,8 +131,8 @@ export function unmaskTokenData(
     const [token, tokenId] = maskedData;
     const tokenAsNumber = token.add(MODULUS).sub(secret.tokenMask).mod(MODULUS);
     // console.log("tokenAsNumber", tokenAsNumber);
-    const tokenAsHex = tokenAsNumber.toHexString().substring(2);
-    const tokenAddress = "0x" + "0".repeat(40 - tokenAsHex.length) + tokenAsHex;
+    console.log(hexZeroPad(tokenAsNumber.toHexString(), 20));
+    const tokenAddress = hexZeroPad(tokenAsNumber.toHexString(), 20)
     return {
         tokenAddress,
         tokenId: tokenId.add(MODULUS).sub(secret.tokenIdMask).mod(MODULUS),
