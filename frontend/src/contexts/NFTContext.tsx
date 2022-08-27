@@ -47,11 +47,30 @@ export default function NFTProvider(props: any) {
                 const alchemy = new Alchemy(settings);
 
                 // Print all NFTs returned in the response:
-                signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then((res: any) => {
-                    setNFTs(res.ownedNfts);
-                    console.log(res);
-                    // console.log(JSON.stringify(res));
-                    setLoadingNFTs(false);
+                signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then(async (res: any) => {
+                    const nfts = res.ownedNfts;
+                    const updatedNFTs = [
+                        ...nfts.map((nft: any) => {
+                            if (nft.title) {
+                                return Promise.resolve(nft);
+                            } else {
+                                const uri = nft.tokenUri.raw;
+                                return fetch(uri).then(x => x.json()).then((fetchRes) => {
+                                    nft.title = fetchRes.name;
+                                    nft.media = [{
+                                        raw: fetchRes.image_url
+                                    }];
+                                    return nft;
+                                });
+                            }
+                        })
+                    ]
+                    await Promise.all(updatedNFTs).then(allNFTs => {
+                        setNFTs(allNFTs);
+                        console.log(allNFTs);
+                        // console.log(JSON.stringify(res));
+                        setLoadingNFTs(false);
+                    });
                 }));
             } else {
                 const contract = new ethers.Contract(NFT_ADDRESS_HARDCODED, NFT_ABI, signer);
