@@ -81,10 +81,10 @@ abstract contract ERC721Tradable is ERC721, ContextMixin, NativeMetaTransaction,
     returns (bool)
     {
         // Whitelist OpenSea proxy contract for easy trading.
-        ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
-        if (address(proxyRegistry.proxies(owner)) == operator) {
-            return true;
-        }
+//        ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
+//        if (address(proxyRegistry.proxies(owner)) == operator) {
+//            return true;
+//        }
 
         return super.isApprovedForAll(owner, operator);
     }

@@ -1,180 +1,190 @@
-import React, {useContext, useReducer, useState} from 'react';
-import {BigNumber, Contract} from "ethers";
-import SecretContext, {Secret} from './contexts/SecretContext';
-import {PrimaryButton, SecondaryButton, AlertButton} from "./components/buttons";
+import React, {useContext, useState} from 'react';
+import {Contract} from "ethers";
+import SecretContext, {jsonToSecret, Secret, secretToJson} from './contexts/SecretContext';
 import {DepositSection} from "./sections/DepositSection";
 import {WithdrawSection} from "./sections/WithdrawSection";
-import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESS} from "./contracts/deployInfo";
-import {useSigner, useNetwork} from "wagmi";
-import mimc from "./crypto/mimc";
+import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES} from "./contracts/deployInfo";
+import {useNetwork, useSigner} from "wagmi";
 import {TransferSection} from "./sections/TransferSection";
-import {ConnectButton} from "@rainbow-me/rainbowkit";
-import NFTSection from "./sections/NFTSection";
+import {GenerateSecretSection} from "./sections/GenSecretSection";
+import {ConnectButton} from '@rainbow-me/rainbowkit';
+import {AlertButton, PrimaryButton, SecondaryButton, TabButton} from "./components/buttons";
+import {useNftFromSecret} from "./utils/useNftFromSecret";
 
-const MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+function AssetDisplay(props: any) {
+    const {removeAsset, updateStatus} = useContext(SecretContext);
 
-function SecretDisplay(props: any) {
-    const {removeAsset, removeKey, updateStatus} = useContext(SecretContext);
-    
-    const {secret, idx, upd, contract, isAsset} = props;
-    
-    const [enableSecretCopy, setEnableSecretCopy] = useState(isAsset);
-	const [enableSharedCopy, setEnableSharedCopy] = useState(true);
-    const [enableIsPaidCopy, setEnableIsPaidCopy] = useState(true);
-	const [refreshing, setRefreshing] = useState(false);
+    const {secret, idx, setAssetSel, highlighted} = props;
+
+    const [enableSecretCopy, setEnableSecretCopy] = useState(true);
+    const [enableExporting, setEnableExporting] = useState(true);
+	const [exportState, setExportState] = useState("Exporting");
+	const [errMsg, setErrMsg] = useState("");
+
+    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
 
     return (
-        <div className={"flex flex-row gap-3 text-white"}>
-			<AlertButton onClick={() => {
-				{isAsset ? removeAsset!(idx) : removeKey!(idx)};
-			}}>
-				Delete
-			</AlertButton>
-			<label><b>Secret key:</b></label>
-            <SecondaryButton onClick={() => {
-                // Copy secret.toHexString() to clipboard
-                navigator.clipboard.writeText(secret.secret!.toHexString());
-                setEnableSecretCopy(false);
-                setTimeout(() => {
-                    setEnableSecretCopy(true);
-                }, 1000);
-            }} disabled={!enableSecretCopy}>
-                {enableSecretCopy || !isAsset ? "Copy" : "Copied!"}
-            </SecondaryButton>
-            {	
-				isAsset ? 	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                	{secret.secret.toHexString().substr(0,6) + "..."}
-            	</span> : <   span className={"px-1 bg-zinc-400 text-zinc-900 rounded-md font-mono"}>
-                	{secret.secret.toHexString().substr(0,6) + "..."}
-				</span>
+        <div className={"flex flex-col gap-1 text-white"}>
+        	<div className={"grid grid-cols-3 sep-3 pb-1 text-white"}>
+				<div>
+            		<AlertButton onClick={() => {
+                		removeAsset!(idx);
+            		}}>
+                		Delete
+            		</AlertButton>
+				</div>
+            	<div className={"flex justify-center"}>
+					<label><b>
+						{nftInfo?.name ? (highlighted ? exportState + " " + nftInfo?.name : nftInfo?.name) : "Loading NFT"}
+					</b></label>
+				</div>
+				<div className={"flex justify-end"}>
+					{ highlighted ? ( (exportState == "Exporting") && <SecondaryButton onClick={() => {
+						setAssetSel(-1);
+					}}>
+						Cancel
+					</SecondaryButton>) : <PrimaryButton onClick={() => {
+						setAssetSel(idx);
+					}}>
+						Export
+					</PrimaryButton> }
+				</div>
+			</div>
+			{ nftInfo?.image ? 
+				<img className="rounded-md" alt={nftInfo.title} src={nftInfo.image} width={600}/>
+				: <img className="rounded-md" alt={"Loading NFT Image"} src={"loading.jpg"} width={600}/>
 			}
-            {
-				isAsset ? <></> : <>
-				<label><b>Shared key:</b></label>
-            	<SecondaryButton onClick={() => {
-                	// Copy secret.toHexString() to clipboard
-                	navigator.clipboard.writeText(secret.shared!.toHexString());
-                	setEnableSharedCopy(false);
-                	setTimeout(() => {
-                    	setEnableSharedCopy(true);
-                	}, 1000);
-            	}} disabled={!enableSharedCopy}>
-                	{enableSharedCopy ? "Copy" : "Copied!"}
-            	</SecondaryButton>
-            	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                	{secret.shared.toHexString().substr(0,6) + "..."}
-            	</span>
-				<label><b>Status:</b></label>
-            	<SecondaryButton onClick={async () => {
-					setRefreshing(true);
-                	const isPaid = !(BigNumber.from(await contract.indexOfLeaf(secret.shared)).isZero());
-					upd(idx);
-					setRefreshing(false);
-            	}} disabled={refreshing}>
-            		Refresh
-				</SecondaryButton>
-            	<   span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
-                	Unpaid
-            	</span>
-				</>
-			}
+			{ highlighted && <div className={"flex flex-row gap-1 text-white pt-1"}>
+				{ ((exportState == "Exporting") || (exportState == "Withdrawing")) &&
+            		<WithdrawSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg} setExportState={setExportState}/>
+				}
+				{ ((exportState == "Exporting") || (exportState == "Transferring")) && 
+	            	<TransferSection idx={idx} rm={removeAsset} setAssetSel={setAssetSel} setErrMsg={setErrMsg} setExportState={setExportState}/>
+				}
+				{ (exportState == "Exporting") && <>
+					<div className={"pr-2"}>
+            			<PrimaryButton onClick={() => {
+                			// Remove the secret
+                			console.log("i am the secret", secret);
+                			setEnableExporting(!enableExporting);
+                			if (enableExporting) {
+                    			navigator.clipboard.writeText(secret.secret!.toHexString());
+                			}
+                			return (<div></div>);
+            			}}>
+                			{enableExporting ? "Export Secret" : "Copy"}
+            			</PrimaryButton>
+					</div>
+            		{!enableExporting && <span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+             			{secret.secret!.toHexString().substr(0, 10) + "..."}
+            		</span>}
+				</>}
+			</div> }
+			{ (errMsg == "") ||	<div className={"text-red-500"}> {errMsg} </div>}
         </div>
+    )
+}
+
+export function DisplayExport(props: any) {
+    const {secret} = props
+    return (
+        < span className={"px-1 bg-zinc-100 text-zinc-900 rounded-md font-mono"}>
+            {secret.toHexString().substr(0, 10) + "..."}
+        </span>
     )
 }
 
 function YourAssetsSection() {
-    const {keys, assets, updateStatus} = useContext(SecretContext);
+    const {keys, assets} = useContext(SecretContext);
     const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESSES[chain.name.toLowerCase()] || "" : ""; 
 
     const {data: signer} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-	
+
+	const [assetStart, setAssetStart] = useState(0);
+	const [assetSel, setAssetSel] = useState(-1);
+
     return (
-        <div>
-			{
-				keys.length + assets.length == 0 ? "Add assets or generate key to begin." : <>
-				{
-					assets.length == 0 ? <></> : <>
-            			<h3 className={"text-lg text-black font-bold"}>
-                			YOUR ASSETS
-            			</h3>
-            			<div className={"flex flex-col gap-2"}>
-                			{
-                    			assets.map(function (secret, idx) {
-									console.log("Secret", idx, secret);
-                        			return (
-                            			<div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
-                               				<div className="flex flex-row justify-between">
-                                   				{/*<span className={"text-white"}></span>*/}
-                                   				<SecretDisplay secret={secret} idx={idx} upd={updateStatus} contract={contract} isAsset={true}/>
-                               				</div>
-                           				</div>
-                        			)
-                    			})
-                			}
-            			</div>
-					</>
-				}
-				{
-					keys.length == 0 ? <></> : <>
-            			<h3 className={"text-lg text-black font-bold"}>
-                			YOUR KEYS 
-            			</h3>
-            			<div className={"flex flex-col gap-2"}>
-                			{ 
-                    			keys.map(function (secret, idx) {
-									console.log("Secret", idx, secret);
-                        			return (
-                            			<div key={idx} className={"bg-stone-800 p-2 rounded-lg"}>
-                               				<div className="flex flex-row justify-between">
-                                   				{/*<span className={"text-white"}></span>*/}
-                                   				<SecretDisplay secret={secret} idx={idx} upd={updateStatus} contract={contract} isAsset={false}/>
-                                			</div>
-                            			</div>
-                        			)
-                    			})
-                			}
-            			</div>
-					</>
-				}
-				</>
-			}
+        <div className={"h-full"}>
+            {
+                assets.length == 0 ? ( 
+                    <div className={"text-center my-auto"}>
+                        You will find your assets here once you deposit into Hurricane.
+                    </div>
+                ) : <> { (assetSel == -1) ? 
+						<div className={"grid grid-cols-8 gap-2"}>
+							<div className={"col-span-6"}>
+                    			<h3 className={"text-lg text-black font-bold"}>
+                        			YOUR ASSETS
+                    			</h3>
+							</div>
+							<PrimaryButton onClick={() => {
+                            	setAssetStart(assetStart - 2);
+                        	}} disabled={assetStart == 0}>
+                            	Back
+                        	</PrimaryButton>
+                        	<PrimaryButton onClick={() => {
+                            	setAssetStart(assetStart + 2);
+                        	}} disabled={assetStart + 3 > assets.length}>
+                           		Next
+                        	</PrimaryButton>
+						</div> : <></> }
+						{ (assetSel == -1) ? <div className={"grid grid-cols-2 gap-2 pt-2 h-full basis-full"}>
+                        	{
+                            	assets.slice(assetStart, assetStart+2).map(function (secret, idx) {
+                                	return (
+                                    	<div key={secret.shared.toString()} className={"bg-stone-800 p-2 rounded-lg h-fit"}>
+                                        	<div className="flex flex-row justify-between">
+                                            	{/*<span className={"text-white"}></span>*/}
+                                            	<AssetDisplay secret={secret} idx={idx+assetStart} setAssetSel={setAssetSel} highlighted={false}/>
+                                        	</div>
+                                    	</div>
+                                	)
+                            	})
+                        	}
+                    	</div> : <div>
+							<div className="bg-stone-800 p-2 rounded-lg h-fit">
+								<AssetDisplay secret={assets[assetSel]} idx={assetSel} setAssetSel={setAssetSel} highlighted={true}/>
+							</div>
+						</div> }
+                	</>
+            }
         </div>
-    )
+    )   
 }
 
-function GenerateSecretSection() {
-    const {chain} = useNetwork()
-    const contractAddress = (chain && chain.name) ? HURRICANE_CONTRACT_ADDRESS[chain.name.toLowerCase()] || "" : "";
+function DepositReceiveSection() {
+    const {data: signer, isError, isLoading} = useSigner();
+    const [DRState, setDRState] = useState("");
 
-    const {data: signer} = useSigner()
-    const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
-    
-    const {addKey} = useContext(SecretContext);
-    const [enableCopy, setEnableCopy] = useState(true);
-
-    return (<div className={"mb-3"}>
-        <h3 className={"text-lg text-black font-bold"}>
-            GENERATE A SECRET
-        </h3>
-        <div className="flex flex-row gap-2">
-            <PrimaryButton onClick={async () => {
-				console.log("Generating");
-                const randomBytes = crypto.getRandomValues(new Uint32Array(10));
-                // Concatenate into hex string
-                const secretString = randomBytes.reduce((acc, cur) => acc + cur.toString(16), "");
-                const secret = BigNumber.from("0x" + secretString).mod(MODULUS);
-				const leaf = mimc(secret, "0");
-				console.log(leaf, await contract.indexOfLeaf(leaf));
-                const isPaid = await !((BigNumber.from(await contract.indexOfLeaf(leaf))).isZero());
-                addKey!({
-					secret: secret,
-					shared: leaf,
-				});
-			}}>
-                Generate 
-            </PrimaryButton>
+    return (<div className="mb-3 flex flex-col h-full gap-4">
+        <div className="flex flex-row gap-2 w-full">
+            <div className="flex-1 grid grid-cols-2 gap-2">
+                <TabButton onClick={() => {
+                    setDRState("deposit");
+                }} disabled={DRState == "deposit"} className={"flex-1"}>
+                    Deposit
+                </TabButton>
+                <TabButton onClick={() => {
+                    setDRState("receive");
+                }} disabled={DRState == "receive"} className={"flex-1"}>
+                    Receive
+                </TabButton>
+            </div>
+            <div className={"p-2 bg-stone-800 rounded-xl"}>
+                {signer && <div className={"mt-auto"}>
+                    <ConnectButton/>
+                </div>}
+            </div>
+        </div>
+        <div className="flex-1">
+            <div className="bg-darkgreen p-2 rounded-lg h-full">
+                {
+                    DRState == "" ? <></> :
+                        (DRState == "deposit" ? <DepositSection/> : <GenerateSecretSection/>)
+                }
+            </div>
         </div>
     </div>)
 }
@@ -187,44 +197,32 @@ export default function Content() {
     console.log("signer", signer);
 
     const [keys, setKeys] = useState(
-        JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map((keyJson: any) => ({
-            secret: BigNumber.from(keyJson.secret),
-            shared: BigNumber.from(keyJson.shared),
-        }))
+        JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
     function saveKeys(newKeys: Secret[]) {
         localStorage.setItem(KEYS_LOCALHOST_KEY, JSON.stringify(
-            newKeys.map((secret) => ({
-                secret: secret.secret.toString(),
-                shared: secret.shared.toString(),
-            }))
+            newKeys.map(secretToJson)
         ));
     }
 
     const [assets, setAssets] = useState(
-        JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map((assetJson: any) => ({
-            secret: BigNumber.from(assetJson.secret),
-            shared: BigNumber.from(assetJson.shared),
-        }))
+        JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
     function saveAssets(newAssets: Secret[]) {
         localStorage.setItem(ASSETS_LOCALHOST_KEY, JSON.stringify(
-            newAssets.map((secret) => ({
-                secret: secret.secret.toString(),
-                shared: secret.shared.toString(),
-            }))
+            newAssets.map(secretToJson)
         ));
     }
 
-    function addKey(newKey: Secret, ) {
+    function addKey(newKey: Secret,) {
         const newKeys = [...keys, newKey];
         saveKeys(newKeys);
         setKeys(newKeys);
     }
 
-    function addAsset(newAsset: Secret, ) {
+    function addAsset(newAsset: Secret,) {
         const newAssets = [...assets, newAsset];
         saveAssets(newAssets);
         setAssets(newAssets);
@@ -244,40 +242,34 @@ export default function Content() {
         setAssets(newAssets);
     }
 
-	function updateStatus(idx: number) {
-		const newSecret = keys[idx];
-		removeKey(idx);
-		addAsset(newSecret);
-	}
+    function updateStatus(idx: number) {
+        const newSecret = keys[idx];
+        removeKey(idx);
+        addAsset(newSecret);
+    }
 
     return (
         <SecretContext.Provider value={{
             keys: keys,
-			assets: assets,
-			addKey: addKey,
-			addAsset: addAsset,
-			removeKey: removeKey,
-			removeAsset: removeAsset,
-			updateStatus: updateStatus
+            assets: assets,
+            addKey: addKey,
+            addAsset: addAsset,
+            removeKey: removeKey,
+            removeAsset: removeAsset,
+            updateStatus: updateStatus
         }}>
-            {signer ? <div className="grid grid-cols-3 gap-8">
-                <div className="col-span-2">
-					<YourAssetsSection/>
-				</div>
-                <div>
-                    <GenerateSecretSection/>
-                    <DepositSection/>
-                    <WithdrawSection/>
-                    <TransferSection/>
-                    <NFTSection/>
+            {signer ? <div className="grid grid-cols-12 gap-8 h-full">
+                <div className="col-span-5 h-full">
+                    <YourAssetsSection/>
+                </div>
+                <div className="col-span-7">
+                    <DepositReceiveSection/>
                 </div>
             </div> : <div className={"font-bold text-darkgreen text-2xl text-center h-full flex flex-col"}>
                 <div className={"my-auto flex flex-col gap-2 items-center"}>
                     <h1>Connect your wallet to be able to interact with Hurricane.</h1>
-                    <ConnectButton/>
                 </div>
             </div>}
         </SecretContext.Provider>
-
     );
 }
