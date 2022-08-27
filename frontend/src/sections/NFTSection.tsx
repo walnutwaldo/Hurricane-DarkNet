@@ -41,7 +41,8 @@ export default function NFTSection(props: any) {
                     </>
                 }
             </div>
-            <div className="overflow-x-scroll w-full pt-2">
+            <div className="overflow-x-scroll w-full pt-2 pb-4">
+                {/*scrollbar scrollbar-thumb-rounded-md scrollbar-thumb-lightgreen scrollbar-track-gray-700*/}
                 <div className={"flex flex-row gap-3 pt-2 pr-2"}>
                     {
                         nfts.slice(nftStart, nftStart + PAGE_SIZE).map((nft: any, idxOffset: number) => {
@@ -54,7 +55,7 @@ export default function NFTSection(props: any) {
                                     }}
                                     disabled={nftIdx == idx}
                                     className={
-                                        "rounded-md shrink-0 w-1/4" +
+                                        "rounded-md shrink-0 w-1/5" +
                                         " " +
                                         (nftIdx === idx ? "border-lightgreen shadow-md" : "hover:scale-95") +
                                         " " +
