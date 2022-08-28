@@ -54,7 +54,7 @@ function KeyDisplay(props: any) {
         provider.on(filter, listener);
 
         return () => { provider.off(filter, listener); };
-    }, [contract]);
+    }, []);
 
     return (
         <div className="flex flex-col gap-1">

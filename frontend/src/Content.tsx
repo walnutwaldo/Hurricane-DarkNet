@@ -276,9 +276,14 @@ export default function Content() {
             const {secret, upd} = action;
             let res;
             if (upd == AddRem.Add) {
+                if (state.find(s => s.secret.eq(secret.secret))) return state;
                 res = [...state, secret];
             } else {
-                res = state.splice(state.findIndex(s => s.secret.eq(secret.secret)), 1);
+                const idx = state.findIndex(s => s.secret.eq(secret.secret));
+                console.log(idx);
+                const newState = [...state];
+                newState.splice(idx, 1);
+                res = newState;
             }
             saveToLocalhost(res, localhostKey);
             return res;
@@ -308,6 +313,7 @@ export default function Content() {
     }
 
     function removeAsset(secret: Secret) {
+        console.log("removing asset " + secret.secret.toString());
         updAssets({secret, upd: AddRem.Remove});
     }
 
