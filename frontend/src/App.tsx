@@ -37,7 +37,7 @@ function App() {
             <div className={"container mx-auto py-4 flex-1"}>
                 <Content/>
             </div>
-            <div>
+            <div className={"p-2 bg-stone-800 rounded-xl flex flex-col"}>
                 <MintSection/>
             </div>
             <div className={"bg-darkgreen text-white courier-new"}>

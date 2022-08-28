@@ -1,9 +1,10 @@
 import {BigNumber, Contract} from "ethers";
 import {useNetwork, useSigner} from "wagmi";
-import {NFT_ABI} from "../contracts/deployInfo";
+import {SAD_ABI} from "../contracts/deployInfo";
 import InlineLoader from "../components/InlineLoader";
 import React, {useContext, useEffect, useRef, useState} from "react";
 import {PrimaryButton} from "../components/buttons";
+import { setDefaultResultOrder } from "dns";
 
 export function MintSection (){
     // Goerli Address: 0x6fcf2F9f82f2036FD14B01c98Df32a69Dd4ba58D
@@ -14,11 +15,11 @@ export function MintSection (){
     const [mintFailed, setMintFailed] = useState(false);
     const [isMinting, setIsMinting] = useState(false);
     
-    async function mint(ID : number) {
-        const contract = new Contract(NFT_ADDRESS, NFT_ABI, signer!);
+    async function mint(ID : string) {
+        const contract = new Contract(NFT_ADDRESS, SAD_ABI, signer!);
         const contractAddress = contract.address;
         console.log(`Attached to NFT at ${contractAddress}`);
-        let NFT_ID = ID === -1 ? Math.floor(Math.random()*10000) : ID;
+        let NFT_ID = ID === "-1" ? (Math.floor(Math.random()*10000)).toString() : ID;
         console.log(`Minting NFT ${NFT_ID}`);
         await contract.unsafeMint(
             USER_ADDRESS,
@@ -43,7 +44,6 @@ export function MintSection (){
     return (
         <div>
             <h3 className={"text-lg text-lightgreen font-bold"}>
-                DEPOSIT
             </h3>
             <div>
                 <div className="flex flex-row gap-2">
@@ -56,20 +56,26 @@ export function MintSection (){
              		/>
                     <PrimaryButton onClick={async () => {
                         setIsMinting(true);
-                        shRef.current && mint(parseInt(shRef.current.value));
-                    }} disabled={false}>
+                        if (shRef.current){
+                                try {
+                                    mint(shRef.current.value.toString());
+                                    setMintFailed(false);
+                                } catch{
+                                    setMintFailed(true);
+                                }
+                            } 
+                        }
+                    } disabled={false}>
                         Mint Selected NFT
                     </PrimaryButton>
-                    <span className={"text-lightgreen"}>
-                        {isMinting && (
-                            <span>
-                                Minting <InlineLoader/>
-                            </span>
-                        )}
-                    </span>
                     <PrimaryButton onClick={async () => {
                         setIsMinting(true);
-                        mint(-1);
+                        try{
+                            mint("-1");
+                            setMintFailed(false);
+                        } catch{
+                            setMintFailed(true);
+                        }
                     }} disabled={false}>
                         Mint Random NFT
                     </PrimaryButton>
@@ -81,8 +87,9 @@ export function MintSection (){
                         )}
                     </span>
                 </div>
-                <div className="pt-2">
-                    Hi
+                <div className="pt-2 text-lightgreen">
+                    {mintFailed && 
+                    <span> Try another NFT ID</span>}
                 </div>
             </div>
         </div>
