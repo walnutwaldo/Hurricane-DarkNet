@@ -131,7 +131,6 @@ export function WithdrawSection(props: any) {
         setIsWithdrawing(false);
         setProof(undefined);
         if (result?.status) {
-            removeAsset!(secret);
             setAssetSel!(-1);
         }
         refreshNFTs().then();

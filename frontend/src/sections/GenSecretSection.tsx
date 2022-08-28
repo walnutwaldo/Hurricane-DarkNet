@@ -16,45 +16,6 @@ function KeyDisplay(props: any) {
 
     const [enableSharedCopy, setEnableSharedCopy] = useState(true);
     const [enableIsPaidCopy, setEnableIsPaidCopy] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-
-    async function refresh() {
-        setRefreshing(true);
-        const leafIdx = BigNumber.from(await contract.leafForPubkey(secret.shared));
-        if (leafIdx.isZero()) {
-            setRefreshing(false);
-            return;
-        }
-
-        const maskedData = await contract.dataForPubkey(secret.shared);
-        const {tokenAddress, tokenId} = unmaskTokenData(maskedData, secret);
-        const leaf = await contract.calcLeaf(
-            secret.shared,
-            tokenAddress,
-            tokenId,
-            secret.noise
-        );
-        const isPaid = (await contract.getLeaf(leafIdx)).eq(leaf);
-        if (isPaid) {
-            updateStatus?.(secret);
-        }
-        setRefreshing(false);
-    }
-
-    useEffect(() => {
-        refresh();
-        const filter = contract.filters.NewLeaf(hexZeroPad(secret.shared, 32));
-
-        const listener = (event: any) => {
-            console.log("New Leaf Event");
-            console.log(event);
-            refresh();
-        }
-
-        provider.on(filter, listener);
-
-        return () => { provider.off(filter, listener); };
-    }, [contract]);
 
     return (
         <div className="flex flex-col gap-1">
@@ -75,10 +36,18 @@ function KeyDisplay(props: any) {
                     className={"px-1 bg-stone-100 text-zinc-900 rounded-md font-mono flex-1 text-ellipsis overflow-hidden min-w-0"}>
                     {secretToSharedKey(secret)}
                 </span>
+				<SecondaryButton onClick={async () => {
+					const leafIdx = BigNumber.from(await contract.leafForPubkey(secret.shared));
+					if (!leafIdx.isZero()) {
+						updateStatus!(secret);
+					}
+				}} className={""}>
+					Refresh
+				</SecondaryButton>
             </div>
             <div className={"grid text-white max-w-full"}>
                 <SecondaryButton onClick={() => {
-                    removeKey!(secret);
+                    removeKey!(idx);
                 }}>
                     Cancel
                 </SecondaryButton>

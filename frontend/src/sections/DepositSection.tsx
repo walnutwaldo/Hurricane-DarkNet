@@ -102,11 +102,11 @@ export function DepositSection() {
             console.log("txWaitErr", resErr);
             setIsDepositing(false);
             setDepositErrMsg("Deposit failed");
-			removeAsset!(secret);
+			removeAsset!(add_position);
         });
         if (!result?.status) {
             setDepositErrMsg("Deposit failed");
-			removeAsset!(secret);
+			removeAsset!(add_position);
         } else {
             setNftIdx(-1);
         }

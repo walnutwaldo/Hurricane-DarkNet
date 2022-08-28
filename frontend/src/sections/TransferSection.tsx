@@ -154,7 +154,6 @@ export function TransferSection(props: any) {
         setExportState("Exporting");
         if (result?.status) {
             console.log("transfer success");
-            removeAsset!(secret);
             setAssetSel!(-1);
         }
     }

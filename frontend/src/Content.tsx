@@ -26,25 +26,9 @@ function AssetDisplay(props: any) {
     const [exportState, setExportState] = useState("Exporting");
     const [errMsg, setErrMsg] = useState("");
 
-    const {nftContract, nftInfo, tokenAddress, tokenId, refresh: refreshNFT} = useNftFromSecret(secret);
+    const {nftContract, nftInfo, tokenAddress, tokenId} = useNftFromSecret(secret);
 
     const [showDropdown, setShowDropdown] = useState(false);
-
-    useEffect(() => {
-        const filter = contract.filters.NewLeaf(hexZeroPad(secret.shared, 32));
-
-        const listener = (event: any) => {
-            console.log("New Leaf Event");
-            console.log(event);
-            refreshNFT();
-        }
-
-        provider.on(filter, listener);
-
-        return () => {
-            provider.off(filter, listener);
-        };
-    }, [contract]);
 
     const nftImage = nftInfo?.media[0]?.raw || nftInfo?.media[0]?.gateway || "";
     console.log(nftImage);
@@ -101,7 +85,7 @@ function AssetDisplay(props: any) {
                                         <button
                                             className="text-gray-700 block px-4 py-2 text-sm bg-red-200 rounded-md hover:bg-red-400 hover:text-white transition"
                                             onClick={() => {
-                                                removeAsset!(secret);
+                                                removeAsset!(idx);
                                             }}
                                         >
                                             Delete
@@ -264,56 +248,57 @@ type SecretUpdate = {
 
 export default function Content() {
     const {data: signer, isError, isLoading} = useSigner();
+    console.log("signer", signer);
 
-    function saveToLocalhost(secrets: Secret[], localhostKey: string) {
-        localStorage.setItem(localhostKey, JSON.stringify(
-            secrets.map(secretToJson)
-        ));
-    }
-
-    function makeReducer(localhostKey: string) {
-        return (state: Secret[], action: SecretUpdate) => {
-            const {secret, upd} = action;
-            let res;
-            if (upd == AddRem.Add) {
-                res = [...state, secret];
-            } else {
-                res = state.splice(state.findIndex(s => s.secret.eq(secret.secret)), 1);
-            }
-            saveToLocalhost(res, localhostKey);
-            return res;
-        }
-    }
-
-    const [keys, updKeys] = useReducer(
-        makeReducer(KEYS_LOCALHOST_KEY),
+    const [keys, setKeys] = useState(
         JSON.parse(localStorage.getItem(KEYS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
-    const [assets, updAssets] = useReducer(
-        makeReducer(ASSETS_LOCALHOST_KEY),
+    function saveKeys(newKeys: Secret[]) {
+        localStorage.setItem(KEYS_LOCALHOST_KEY, JSON.stringify(
+            newKeys.map(secretToJson)
+        ));
+    }
+
+    const [assets, setAssets] = useState(
         JSON.parse(localStorage.getItem(ASSETS_LOCALHOST_KEY) || '[]').map(jsonToSecret)
     );
 
-    function addKey(secret: Secret) {
-        updKeys({secret, upd: AddRem.Add});
+    function saveAssets(newAssets: Secret[]) {
+        localStorage.setItem(ASSETS_LOCALHOST_KEY, JSON.stringify(
+            newAssets.map(secretToJson)
+        ));
     }
 
-    function addAsset(secret: Secret) {
-        updAssets({secret, upd: AddRem.Add});
+    function addKey(newKey: Secret,) {
+        const newKeys = [...keys, newKey];
+        saveKeys(newKeys);
+        setKeys(newKeys);
     }
 
-    function removeKey(secret: Secret) {
-        updKeys({secret, upd: AddRem.Remove});
+    function addAsset(newAsset: Secret,) {
+        const newAssets = [...assets, newAsset];
+        saveAssets(newAssets);
+        setAssets(newAssets);
     }
 
-    function removeAsset(secret: Secret) {
-        updAssets({secret, upd: AddRem.Remove});
+    function removeKey(idx: number) {
+        const newKeys = [...keys];
+        newKeys.splice(idx, 1);
+        saveKeys(newKeys);
+        setKeys(newKeys);
     }
 
-    function updateStatus(secret: Secret) {
-        removeKey(secret);
-        addAsset(secret);
+    function removeAsset(idx: number) {
+        const newAssets = [...assets];
+        newAssets.splice(idx, 1);
+        saveAssets(newAssets);
+        setAssets(newAssets);
+    }
+
+    function updateStatus(idx: number) {
+        const secret = keys[idx];
+		addAsset(secret);
     }
 
     return (
