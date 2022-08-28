@@ -26,7 +26,7 @@ export function useNftFromSecret(secret: {
     const alchemy = useAlchemy();
 
     const refresh = useCallback(() => {
-        if (secret && alchemy) {
+        if (secret) {
             const pubKey = mimc(secret.secret, "0");
             contract.dataForPubkey(pubKey).then((maskedData: [BigNumber, BigNumber]) => {
                 console.log("maskedData", maskedData);
@@ -37,12 +37,32 @@ export function useNftFromSecret(secret: {
                 const nft = new Contract(unmaskedData.tokenAddress, NFT_ABI, signer!);
                 setNftContract(nft);
 
-                alchemy.nft.getNftMetadata(
-                    unmaskedData.tokenAddress,
-                    unmaskedData.tokenId.toString()
-                ).then((nft) => cleanupAlchemyMetadata(nft, alchemy)).then((nft) => {
-                    setNftInfo(nft);
-                });
+                if (alchemy) {
+                    alchemy.nft.getNftMetadata(
+                        unmaskedData.tokenAddress,
+                        unmaskedData.tokenId.toString()
+                    ).then((nft) => cleanupAlchemyMetadata(nft, alchemy)).then((nft) => {
+                        setNftInfo(nft);
+                    });
+                } else {
+                    nft.tokenURI(unmaskedData.tokenId).then((tokenURI: any) => {
+                        fetch(tokenURI).then(res => res.json()).then((res: any) => {
+                            setNftInfo({
+                                contract: {
+                                    address: unmaskedData.tokenAddress,
+                                },
+                                tokenId: unmaskedData.tokenId.toString(),
+                                tokenURI: {
+                                    raw: tokenURI
+                                },
+                                media: [{
+                                    raw: res.image
+                                }],
+                                title: res.name
+                            });
+                        });
+                    });
+                }
             })
         }
     }, [secret])

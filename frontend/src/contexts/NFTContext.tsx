@@ -27,7 +27,7 @@ export function useAlchemy() {
     const {chain} = useNetwork()
     const networkName = chain && chain.name && chain.name.toLowerCase();
 
-    const settings = networkName ? {
+    const settings = (networkName && networkName !== 'localhost') ? {
         apiKey: process.env.ALCHEMY_KEY,
         network: NETWORK_TO_CHAIN[networkName]
     } : undefined;
