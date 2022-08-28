@@ -4,6 +4,8 @@ import {useNetwork, useSigner} from "wagmi";
 import {HURRICANE_CONTRACT_ABI, HURRICANE_CONTRACT_ADDRESSES, NFT_ABI} from "../contracts/deployInfo";
 import mimc from "../crypto/mimc";
 import {unmaskTokenData} from "../contexts/SecretContext";
+import {cleanupAlchemyMetadata, useAlchemy} from "../contexts/NFTContext";
+import {hexZeroPad} from "ethers/lib/utils";
 
 export function useNftFromSecret(secret: {
     secret: BigNumber,
@@ -21,19 +23,25 @@ export function useNftFromSecret(secret: {
     const {data: signer, isError, isLoading} = useSigner()
     const contract = new Contract(contractAddress, HURRICANE_CONTRACT_ABI, signer!);
 
+    const alchemy = useAlchemy();
+
     const refresh = useCallback(() => {
-        if (secret) {
+        if (secret && alchemy) {
             const pubKey = mimc(secret.secret, "0");
             contract.dataForPubkey(pubKey).then((maskedData: [BigNumber, BigNumber]) => {
+                console.log("maskedData", maskedData);
                 const unmaskedData = unmaskTokenData(maskedData, secret);
                 setTokenAddress(unmaskedData.tokenAddress);
                 setTokenId(unmaskedData.tokenId);
+
                 const nft = new Contract(unmaskedData.tokenAddress, NFT_ABI, signer!);
                 setNftContract(nft);
-                nft.tokenURI(unmaskedData.tokenId).then((tokenURI: any) => {
-                    fetch(tokenURI).then(res=>res.json()).then((res: any) => {
-                        setNftInfo(res);
-                    });
+
+                alchemy.nft.getNftMetadata(
+                    unmaskedData.tokenAddress,
+                    unmaskedData.tokenId.toString()
+                ).then((nft) => cleanupAlchemyMetadata(nft, alchemy)).then((nft) => {
+                    setNftInfo(nft);
                 });
             })
         }

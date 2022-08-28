@@ -23,6 +23,32 @@ const NETWORK_TO_CHAIN = {
 
 const NFT_ADDRESS_HARDCODED = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
+export function useAlchemy() {
+    const {chain} = useNetwork()
+    const networkName = chain && chain.name && chain.name.toLowerCase();
+
+    const settings = networkName ? {
+        apiKey: process.env.ALCHEMY_KEY,
+        network: NETWORK_TO_CHAIN[networkName]
+    } : undefined;
+    return settings && new Alchemy(settings);
+}
+
+export function cleanupAlchemyMetadata(nft: any, alchemy: Alchemy) {
+    if (nft.title) {
+        return Promise.resolve(nft);
+    } else {
+        const uri = nft.tokenUri.raw;
+        return fetch(uri).then(x => x.json()).then((fetchRes) => {
+            nft.title = fetchRes.name;
+            nft.media = [{
+                raw: fetchRes.image_url
+            }];
+            return nft;
+        });
+    }
+}
+
 export default function NFTProvider(props: any) {
     const {children} = props;
     const [nfts, setNFTs] = useState<any[]>([]);
@@ -35,35 +61,18 @@ export default function NFTProvider(props: any) {
 
     const lastSigner = useRef<string>("");
 
+    const alchemy = useAlchemy();
+
     const refreshNFTs = useCallback(async () => {
         if (signer && networkName) {
             setNFTs([]);
             setLoadingNFTs(true);
             if (NETWORK_TO_CHAIN[networkName]) {
-                const settings = {
-                    apiKey: process.env.ALCHEMY_KEY,
-                    network: NETWORK_TO_CHAIN[networkName]
-                };
-                const alchemy = new Alchemy(settings);
-
                 // Print all NFTs returned in the response:
-                signer.getAddress().then(addr => alchemy.nft.getNftsForOwner(addr).then(async (res: any) => {
+                signer.getAddress().then(addr => alchemy!.nft.getNftsForOwner(addr).then(async (res: any) => {
                     const nfts = res.ownedNfts;
                     const updatedNFTs = [
-                        ...nfts.map((nft: any) => {
-                            if (nft.title) {
-                                return Promise.resolve(nft);
-                            } else {
-                                const uri = nft.tokenUri.raw;
-                                return fetch(uri).then(x => x.json()).then((fetchRes) => {
-                                    nft.title = fetchRes.name;
-                                    nft.media = [{
-                                        raw: fetchRes.image_url
-                                    }];
-                                    return nft;
-                                });
-                            }
-                        })
+                        ...nfts.map((nft: any) => cleanupAlchemyMetadata(nft, alchemy!))
                     ]
                     await Promise.all(updatedNFTs).then(allNFTs => {
                         setNFTs(allNFTs);

@@ -13,6 +13,7 @@ import {useNftFromSecret} from "./utils/useNftFromSecret";
 import NFTProvider from "./contexts/NFTContext";
 import {ChevronDown, MoreVertical, X, XSquare} from "react-feather";
 import {hexZeroPad} from "ethers/lib/utils";
+import InlineLoader from "./components/InlineLoader";
 
 function AssetDisplay(props: any) {
     const {removeAsset, updateStatus} = useContext(SecretContext);
@@ -45,6 +46,9 @@ function AssetDisplay(props: any) {
         };
     }, [contract]);
 
+    const nftImage = nftInfo?.media[0]?.raw || nftInfo?.media[0]?.gateway || "";
+    console.log(nftImage);
+
     return (
         <div className={"gap-1 text-stone-200"}>
             <div className={"grid grid-cols-5 pb-1 relative"}>
@@ -52,7 +56,7 @@ function AssetDisplay(props: any) {
                 </div>
                 <div className={"grid justify-center text-center courier-new col-span-3"}>
                     <label><b>
-                        {nftInfo?.name || "Loading NFT"}
+                        {nftInfo?.title || <span>Awaiting NFT<InlineLoader/></span>}
                     </b></label>
                 </div>
                 <div className={"grid justify-end text-right hover:cursor-pointer hover:text-white"}>
@@ -109,8 +113,8 @@ function AssetDisplay(props: any) {
                     </div>
                 </div>
             </div>
-            {nftInfo?.image ?
-                <img className="rounded-md" alt={nftInfo.title} src={nftInfo.image} width={600}/>
+            {nftImage ?
+                <img className="rounded-md" alt={nftInfo.title} src={nftImage} width={600}/>
                 : <img className="rounded-md" alt={"Loading NFT Image"} src={"loading.jpg"} width={600}/>
             }
             <div className={
